@@ -36,3 +36,6 @@ build/
 
 ### Mac OS ###
 .DS_Storedata/
+deps/
+data/
+.idea/
