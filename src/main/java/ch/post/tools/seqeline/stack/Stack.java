@@ -1,7 +1,7 @@
 package ch.post.tools.seqeline.stack;
 
 public class Stack {
-    private final Frame root = new Root();
+    private final Root root = new Root();
     private Frame top = root;
 
     public void execute(Frame frame, Runnable runnable) {
@@ -15,7 +15,7 @@ public class Stack {
         return top;
     }
 
-    public Frame root() {
+    public Root root() {
         return root;
     }
 }

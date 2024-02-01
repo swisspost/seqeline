@@ -1,5 +1,6 @@
 package ch.post.tools.seqeline;
 
+import ch.post.tools.seqeline.process.TreeProcessor;
 import lombok.SneakyThrows;
 import lombok.extern.java.Log;
 import lombok.extern.slf4j.Slf4j;
@@ -30,50 +31,10 @@ import static org.joox.JOOX.$;
 @Log
 public class Main {
     public static void main(String[] args) throws IOException, SAXException {
-        if (args.length < 1) {
-            log.severe("Missing filename argument");
+        if (args.length < 3) {
+            log.severe("seqeline <domain> <application> <filename>");
             System.exit(1);
         }
-        new Tree("app", args[0]).process("target/out.trig");
-    }
-
-    static class Tree {
-        private static final String line = "https://schema.post.ch/lineage/";
-        private static final String DATA_ROOT_NS = "https://data.post.ch/";
-
-        private Match root;
-        private ModelBuilder modelBuilder;
-        private String line_data;
-        private String localScope;
-        private Map<String,Element> nodes = new HashMap<>();
-
-        @SneakyThrows
-        public Tree(String scope, String inputPath) {
-            root = $(new File(inputPath));
-            var lastSeparator = inputPath.lastIndexOf(File.separator);
-            line_data = DATA_ROOT_NS + scope + "/lineage/";
-            localScope = inputPath.substring(lastSeparator + 1);
-            modelBuilder = new ModelBuilder()
-                    .namedGraph("https://graph.post.ch/" + scope + "/lineage/" + localScope)
-                    .setNamespace("rdf", RDF.NAMESPACE)
-                    .setNamespace("rdfs", RDFS.NAMESPACE)
-                    .setNamespace("line", line)
-                    .setNamespace("line_data", line_data);
-        }
-
-        @SneakyThrows
-        public void process(String outputPath) {
-
-            Model model = modelBuilder.build();
-            var out = new FileOutputStream("target/graph.trig");
-            RDFWriter writer = Rio.createWriter(RDFFormat.TRIG, out);
-            writer.startRDF();
-            model.getNamespaces().forEach(ns -> writer.handleNamespace(ns.getPrefix(), ns.getName()));
-            for (var statement : model) {
-                writer.handleStatement(statement);
-            }
-            writer.endRDF();
-
-        }
+        new TreeProcessor(args[0], args[1], args[2]).process("target/out.trig");
     }
 }
