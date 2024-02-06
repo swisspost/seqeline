@@ -15,15 +15,21 @@ public abstract class Frame {
                 .or(() -> Optional.ofNullable(parent).flatMap(p -> p.resolve(qualifiedName)));
     }
 
-    public void returnBinding(Binding binding) {
+    public Frame returnBinding(Binding binding) {
         Optional.ofNullable(parent).ifPresent(p -> p.returnBinding(binding));
+        return this;
     }
 
     protected Optional<Binding> resolveLocal(QualifiedName qualifiedName) {
         return Optional.empty();
     }
 
-    public void declare(Binding binding) {
+    public Frame declare(Binding binding) {
         Optional.ofNullable(parent).orElseThrow().declare(binding);
+        return this;
+    }
+
+    protected void pop() {
+        // do nothing
     }
 }

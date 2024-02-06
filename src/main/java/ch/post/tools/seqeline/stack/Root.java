@@ -14,24 +14,30 @@ public class Root extends Frame {
 
     @Override
     protected Optional<Binding> resolveLocal(QualifiedName qualifiedName) {
-        var binding = new Binding(qualifiedName.getName(), BindingType.UNDEFINED);
-        if(qualifiedName.getPrefix() != null) {
-            var parent = new Binding(qualifiedName.getPrefix(), BindingType.UNDEFINED);
-            binding = bindings.add(parent).addChild(binding);
+        if(qualifiedName.isGlobal()) {
+            var binding = new Binding(qualifiedName.getName(), BindingType.UNDEFINED);
+            if (qualifiedName.getPrefix() != null) {
+                var parent = new Binding(qualifiedName.getPrefix(), BindingType.UNDEFINED);
+                binding = bindings.add(parent).addChild(binding);
+            } else {
+                binding = bindings.add(binding);
+            }
+            return Optional.of(binding);
         } else {
-            binding = bindings.add(binding);
+            return Optional.empty();
         }
-        return Optional.of(binding);
     }
 
     @Override
-    public void returnBinding(Binding binding) {
-        var parent = new Binding("<returned-orphans>", BindingType.UNDEFINED);
+    public Frame returnBinding(Binding binding) {
+        var parent = new Binding("returned-orphans", BindingType.UNDEFINED);
         bindings.add(parent).addChild(binding);
+        return this;
     }
 
     @Override
-    public void declare(Binding binding) {
+    public Frame declare(Binding binding) {
         bindings.add(binding);
+        return this;
     }
 }

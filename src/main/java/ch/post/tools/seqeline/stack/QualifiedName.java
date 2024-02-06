@@ -8,12 +8,17 @@ import lombok.Data;
 public class QualifiedName {
     private String prefix;
     private String name;
+    private boolean global;
 
     public static QualifiedName of(String name) {
-        return new QualifiedName(null, name);
+        return new QualifiedName(null, name, true);
     }
 
     public static QualifiedName of(String prefix, String name) {
-        return new QualifiedName(prefix, name);
+        return new QualifiedName(prefix, name, true);
+    }
+
+    public static QualifiedName of(String prefix, String name, boolean global) {
+        return new QualifiedName(prefix, name, global);
     }
 }

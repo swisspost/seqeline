@@ -19,7 +19,16 @@ public class BindingBag {
     }
 
     public Binding add(Binding binding) {
-        return bindings.putIfAbsent(binding.getName(), binding);
+        bindings.putIfAbsent(binding.getName(), binding);
+        return bindings.get(binding.getName());
+    }
+
+    public Optional<Binding> get(Binding binding) {
+        return Optional.ofNullable(bindings.get(binding.getName()));
+    }
+
+    public Optional<Binding> remove(Binding binding) {
+        return Optional.ofNullable(bindings.remove(binding.getName()));
     }
 
     public Stream<Binding> stream() {

@@ -1,5 +1,6 @@
 package ch.post.tools.seqeline;
 
+import ch.post.tools.seqeline.catalog.Schema;
 import ch.post.tools.seqeline.process.TreeProcessor;
 import lombok.SneakyThrows;
 import lombok.extern.java.Log;
@@ -17,6 +18,7 @@ import org.joox.Match;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
+import javax.xml.catalog.Catalog;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -35,6 +37,7 @@ public class Main {
             log.severe("seqeline <domain> <application> <filename>");
             System.exit(1);
         }
-        new TreeProcessor(args[0], args[1], args[2]).process("target/out.trig");
+        Schema schema = new Schema("data/model/metadata.json");
+        new TreeProcessor(args[0], args[1], args[2], schema).process("target/out.trig");
     }
 }

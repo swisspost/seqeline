@@ -24,14 +24,18 @@ public class LexicalScope extends Frame {
     }
 
     @Override
-    public void declare(Binding binding) {
+    public Frame declare(Binding binding) {
+        // Let global objects bubble up
         if(binding.getType() == BindingType.RELATION || binding.getType() == BindingType.PACKAGE) {
             super.declare(binding);
         } else {
             declarations.add(binding);
         }
-        if(owner != null && binding.getType() == BindingType.ROUTINE) {
+        if(owner != null &&
+                (binding.getType() == BindingType.ROUTINE ||
+                binding.getType() == BindingType.PARAMETER)) {
             owner.addChild(binding);
         }
+        return this;
     }
 }

@@ -7,12 +7,13 @@ import lombok.RequiredArgsConstructor;
  * Defines a binding as target for return bindings emitted in lower frames.
  */
 @RequiredArgsConstructor
-public class VariableAssignment extends Frame {
+public class Assignment extends Frame {
 
     private final Binding target;
 
     @Override
-    public void returnBinding(Binding binding) {
+    public Frame returnBinding(Binding binding) {
         binding.addOutput(target);
+        return this;
     }
 }

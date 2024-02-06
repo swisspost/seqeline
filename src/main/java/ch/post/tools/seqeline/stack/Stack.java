@@ -8,6 +8,7 @@ public class Stack {
         frame.parent = top;
         top = frame;
         runnable.run();
+        frame.pop();
         top = frame.parent;
     }
 
