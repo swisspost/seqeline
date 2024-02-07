@@ -7,8 +7,6 @@ import ch.post.tools.seqeline.stack.*;
 import lombok.RequiredArgsConstructor;
 import org.joox.Match;
 
-import java.util.Optional;
-
 @RequiredArgsConstructor
 public class NodeProcessor {
 
@@ -32,51 +30,62 @@ public class NodeProcessor {
             case "VariableOrConstantDeclaratorId" ->
                 context().declare(binding(node, BindingType.VARIABLE));
 
-            case "MethodDeclarator" -> {
-                var routine = new Binding(name(node), BindingType.ROUTINE);
+            case "ProgramUnit" -> {
+                var routine = new Binding(node.attr("MethodName"), BindingType.ROUTINE);
                 context().declare(routine);
                 stack.execute(new LexicalScope(routine), processChildren(node));
             }
 
             case "FormalParameter" -> context().declare(binding(node, BindingType.PARAMETER));
 
-            case "OpenStatement" -> stack.execute(new Assignment(binding(node.child(0), BindingType.CURSOR)),
+            case "OpenStatement" -> stack.execute(new Assignment(resolveNew(node.child(0), BindingType.CURSOR)),
                     processSiblings(node.child(0)));
 
-            case "CursorForLoopStatement" -> stack.execute(new Assignment(binding(node.child(0), BindingType.RECORD)),
-                    processSiblings(node.child(0)));
+            case "CursorForLoopStatement" -> stack.execute(new LexicalScope(), () ->
+                    stack.execute(new Assignment(resolveNew(node.child(0), BindingType.RECORD)),
+                    processSiblings(node.child(0))));
 
-            case "SelectStatement", "QueryBlock" -> stack.execute(new FunctionalScope(), processChildren(node));
+            case "SelectStatement", "QueryBlock" -> stack.execute(new SelectStatement(), processChildren(node));
 
             case "SelectIntoStatement" ->
                     stack.execute(new Assignment(context().resolve(
                             QualifiedName.of(name(node.child("IntoClause").child("VariableName")))).orElseThrow()),
-                            () -> stack.execute(new FunctionalScope(), processChildren(node)));
+                            () -> stack.execute(new SelectStatement(), processChildren(node)));
 
-            case "SelectList" -> node.children().each().forEach(child -> {
-                if (child.is("ColumnAlias")) {
-                    Binding alias = binding(child, BindingType.RESULT);
-                    context().declare(alias).returnBinding(alias);
-                    stack.execute(new Assignment(alias), () -> process(child.prev()));
-                } else {
-                    stack.execute(new Result(), () -> process(child.prev()));
-                    if (child.next().isEmpty()) {
-                        stack.execute(new Result(), () -> process(child));
-                    }
-                }
-            });
+            case "SelectList" -> {
+                stack.execute(new SelectStatement.SelectList(), () ->
+                        node.children().each().forEach(child -> {
+                            if (child.is("ColumnAlias")) {
+                                Binding alias = binding(child, BindingType.ALIAS);
+                                context().returnBinding(alias);
+                                stack.execute(new Assignment(alias), () -> process(child.prev()));
+                            } else {
+                                process(child.prev());
+                                if (child.next().isEmpty()) {
+                                    process(child);
+                                }
+                            }
+                        }));
+            }
 
-            case "FromClause", "SqlExpression", "Expression" -> stack.execute(new Expression(), processChildren(node));
-
-            case "TableName" -> context().declare(schema.resolve(name(node)).orElse(binding(node, BindingType.RECORD)));
+            case "TableName" -> context().returnBinding(
+                    schema.resolve(name(node))
+                            .map(relation -> stack.root().declare(relation))
+                            .orElse(resolveNew(node, BindingType.RECORD)));
 
             case "Column" -> {
-                context().declare(binding(node, BindingType.COLUMN));
-                node.prev("TableName").each().forEach(relation -> context().resolve(QualifiedName.of(name(relation))));
+                var column = resolveNew(node, BindingType.FIELD);
+                context().returnBinding(column);
+                node.prev("TableName").each().forEach(relation -> context().resolve(QualifiedName.of(name(relation))).ifPresent(r -> r.addChild(column)));
             }
 
             default -> processChildren(node).run();
         }
+    }
+
+    private Binding resolveNew(Match node, BindingType type) {
+        return context().resolve(QualifiedName.of(null, name(node), false)).orElse(
+                context().declare(binding(node, type)));
     }
 
     private Binding binding(Match node, BindingType type) {

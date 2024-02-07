@@ -20,6 +20,8 @@ import org.joox.Match;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.eclipse.rdf4j.model.util.Values.iri;
@@ -63,9 +65,9 @@ public class TreeProcessor {
         Stack stack = new Stack();
         new NodeProcessor(stack, schema).process(root);
 
-        AtomicInteger nodeId = new AtomicInteger(0);
+        Set<IRI> createdNodes = new HashSet<>();
         stack.root().getBindings().stream().forEach(binding ->
-                createNode(modelBuilder, nodeId, binding, 2, null));
+                createNode(modelBuilder, binding, 2, null, createdNodes));
 
         Model model = modelBuilder.build();
         var out = new FileOutputStream(outputPath);
@@ -115,21 +117,25 @@ public class TreeProcessor {
         }
     }
 
-    private IRI createNode(ModelBuilder modelBuilder, AtomicInteger id, Binding binding, int nameDepth, String
-            prefix) {
+    private IRI createNode(ModelBuilder modelBuilder, Binding binding, int nameDepth, String prefix, Set<IRI> createdNodes) {
         if (prefix != null) {
             prefix = prefix + ".";
         } else {
             prefix = "";
         }
-        var name = nameDepth > 0 ? prefix + binding.getName().toLowerCase() : "binding:" + id.getAndIncrement();
+        var name = nameDepth > 0 ? prefix + binding.getName().toLowerCase() : "binding:" + binding.getId();
         var nodeIri = iri(line_data, name);
+        if(createdNodes.contains(nodeIri)) {
+            return nodeIri;
+        } else {
+            createdNodes.add(nodeIri);
+        }
         modelBuilder.add(nodeIri, RDF.TYPE, iri(line, capitalize(binding.getType().toString())));
         modelBuilder.add(nodeIri, RDFS.LABEL, literal(binding.getName().toLowerCase()));
         binding.children().forEach(child ->
-                modelBuilder.add(nodeIri, iri(line, "member"), createNode(modelBuilder, id, child, nameDepth - 1, name)));
+                modelBuilder.add(nodeIri, iri(line, "member"), createNode(modelBuilder, child, nameDepth - 1, name, createdNodes)));
         binding.outputs().forEach(output ->
-                modelBuilder.add(nodeIri, iri(line, "output"), createNode(modelBuilder, id, output, 0, null)));
+                modelBuilder.add(nodeIri, iri(line, "output"), createNode(modelBuilder, output, 0, null, createdNodes)));
         return nodeIri;
     }
 

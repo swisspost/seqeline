@@ -29,15 +29,13 @@ public class Root extends Frame {
     }
 
     @Override
-    public Frame returnBinding(Binding binding) {
+    public void returnBinding(Binding binding) {
         var parent = new Binding("returned-orphans", BindingType.UNDEFINED);
         bindings.add(parent).addChild(binding);
-        return this;
     }
 
     @Override
-    public Frame declare(Binding binding) {
-        bindings.add(binding);
-        return this;
+    public Binding declare(Binding binding) {
+        return bindings.add(binding);
     }
 }

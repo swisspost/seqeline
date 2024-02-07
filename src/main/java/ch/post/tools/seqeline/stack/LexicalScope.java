@@ -24,10 +24,11 @@ public class LexicalScope extends Frame {
     }
 
     @Override
-    public Frame declare(Binding binding) {
+    public Binding declare(Binding binding) {
+        Binding result = binding;
         // Let global objects bubble up
         if(binding.getType() == BindingType.RELATION || binding.getType() == BindingType.PACKAGE) {
-            super.declare(binding);
+            result = super.declare(binding);
         } else {
             declarations.add(binding);
         }
@@ -36,6 +37,6 @@ public class LexicalScope extends Frame {
                 binding.getType() == BindingType.PARAMETER)) {
             owner.addChild(binding);
         }
-        return this;
+        return result;
     }
 }

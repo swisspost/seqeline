@@ -6,10 +6,16 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 public class Binding {
+
+    private final static AtomicInteger sequence = new AtomicInteger(0);
+
+    @Getter
+    private final int id = sequence.incrementAndGet();
 
     @Getter
     private final String name;

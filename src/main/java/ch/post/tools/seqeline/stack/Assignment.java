@@ -12,8 +12,7 @@ public class Assignment extends Frame {
     private final Binding target;
 
     @Override
-    public Frame returnBinding(Binding binding) {
+    public void returnBinding(Binding binding) {
         binding.addOutput(target);
-        return this;
     }
 }
