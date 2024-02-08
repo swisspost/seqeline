@@ -136,6 +136,8 @@ public class TreeProcessor {
                 modelBuilder.add(nodeIri, iri(line, "member"), createNode(modelBuilder, child, nameDepth - 1, name, createdNodes)));
         binding.outputs().forEach(output ->
                 modelBuilder.add(nodeIri, iri(line, "output"), createNode(modelBuilder, output, 0, null, createdNodes)));
+        binding.effects().forEach(effect ->
+                modelBuilder.add(nodeIri, iri(line, "effect"), createNode(modelBuilder, effect, 0, null, createdNodes)));
         return nodeIri;
     }
 

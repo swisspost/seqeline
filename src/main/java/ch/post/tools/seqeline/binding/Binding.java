@@ -27,6 +27,8 @@ public class Binding {
 
     private final Set<Binding> outputs = new HashSet<>();
 
+    private final Set<Binding> effects = new HashSet<>();
+
     public Optional<Binding> match(QualifiedName qualifiedName) {
         if(name.equals(qualifiedName.getPrefix())) {
             return Optional.ofNullable(children.get(name));
@@ -45,11 +47,19 @@ public class Binding {
         outputs.add(binding);
     }
 
-    public Stream<Binding> outputs() {
-        return outputs.stream();
+    public void addEffect(Binding binding) {
+        effects.add(binding);
     }
 
     public Stream<Binding> children() {
         return children.values().stream();
+    }
+
+    public Stream<Binding> outputs() {
+        return outputs.stream();
+    }
+
+    public Stream<Binding> effects() {
+        return effects.stream();
     }
 }

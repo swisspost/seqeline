@@ -15,6 +15,7 @@ public abstract class Frame {
         return result.or(() -> Optional.ofNullable(parent).flatMap(p -> p.resolve(qualifiedName)));
     }
 
+
     public void returnBinding(Binding binding) {
         Optional.ofNullable(parent).ifPresent(p -> p.returnBinding(binding));
     }
@@ -25,6 +26,9 @@ public abstract class Frame {
 
     public Binding declare(Binding binding) {
         return Optional.ofNullable(parent).orElseThrow().declare(binding);
+    }
+    protected void push() {
+        // do nothing
     }
 
     protected void pop() {

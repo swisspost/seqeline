@@ -7,6 +7,7 @@ public class Stack {
     public void execute(Frame frame, Runnable runnable) {
         frame.parent = top;
         top = frame;
+        frame.push();
         runnable.run();
         frame.pop();
         top = frame.parent;
@@ -18,5 +19,10 @@ public class Stack {
 
     public Root root() {
         return root;
+    }
+
+    public void pop() {
+        top.pop();
+        top = top.parent;
     }
 }

@@ -7,6 +7,8 @@ import ch.post.tools.seqeline.stack.*;
 import lombok.RequiredArgsConstructor;
 import org.joox.Match;
 
+import java.util.Optional;
+
 @RequiredArgsConstructor
 public class NodeProcessor {
 
@@ -79,13 +81,23 @@ public class NodeProcessor {
                 node.prev("TableName").each().forEach(relation -> context().resolve(QualifiedName.of(name(relation))).ifPresent(r -> r.addChild(column)));
             }
 
+            case "JoinClause", "WhereClause" -> {
+                stack.execute(new SelectStatement.EffectClause(), processChildren(node));
+            }
+
+            case "SubqueryOperation" -> {
+                if(name(node).equals("UNION ALL")) {
+                    stack.pop();
+                }
+            }
+
             default -> processChildren(node).run();
         }
     }
 
     private Binding resolveNew(Match node, BindingType type) {
-        return context().resolve(QualifiedName.of(null, name(node), false)).orElse(
-                context().declare(binding(node, type)));
+        return context().resolve(QualifiedName.of(null, name(node), false)).or(() ->
+                Optional.of(context().declare(binding(node, type)))).orElseThrow();
     }
 
     private Binding binding(Match node, BindingType type) {
