@@ -23,7 +23,11 @@ public class SelectStatement extends Frame {
 
     @Override
     protected Optional<Binding> resolveLocal(QualifiedName qualifiedName) {
-        return selection.lookup(qualifiedName);
+        if(qualifiedName.isFunctional()) {
+            return selection.lookup(qualifiedName);
+        } else {
+            return Optional.empty();
+        }
     }
 
     @Override

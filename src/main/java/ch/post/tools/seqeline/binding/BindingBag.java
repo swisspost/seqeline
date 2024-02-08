@@ -14,8 +14,9 @@ public class BindingBag {
     public Optional<Binding> lookup(QualifiedName qualifiedName) {
         String root = Optional.ofNullable(qualifiedName.getPrefix())
                 .orElse(qualifiedName.getName());
-        return Optional.ofNullable(bindings.get(root))
+        var result = Optional.ofNullable(bindings.get(root))
                 .flatMap(binding -> binding.match(qualifiedName));
+        return result;
     }
 
     public Binding add(Binding binding) {

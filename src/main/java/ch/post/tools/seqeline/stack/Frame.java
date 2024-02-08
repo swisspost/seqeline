@@ -11,8 +11,8 @@ public abstract class Frame {
     protected Frame parent;
 
     public Optional<Binding> resolve(QualifiedName qualifiedName) {
-        return resolveLocal(qualifiedName)
-                .or(() -> Optional.ofNullable(parent).flatMap(p -> p.resolve(qualifiedName)));
+        var result = resolveLocal(qualifiedName);
+        return result.or(() -> Optional.ofNullable(parent).flatMap(p -> p.resolve(qualifiedName)));
     }
 
     public void returnBinding(Binding binding) {

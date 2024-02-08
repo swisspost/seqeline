@@ -52,11 +52,12 @@ public class NodeProcessor {
                             QualifiedName.of(name(node.child("IntoClause").child("VariableName")))).orElseThrow()),
                             () -> stack.execute(new SelectStatement(), processChildren(node)));
 
-            case "SelectList" -> {
+            case "SelectList" ->
                 stack.execute(new SelectStatement.SelectList(), () ->
                         node.children().each().forEach(child -> {
                             if (child.is("ColumnAlias")) {
                                 Binding alias = binding(child, BindingType.ALIAS);
+                                context().declare(alias);
                                 context().returnBinding(alias);
                                 stack.execute(new Assignment(alias), () -> process(child.prev()));
                             } else {
@@ -66,7 +67,6 @@ public class NodeProcessor {
                                 }
                             }
                         }));
-            }
 
             case "TableName" -> context().returnBinding(
                     schema.resolve(name(node))
@@ -74,7 +74,7 @@ public class NodeProcessor {
                             .orElse(resolveNew(node, BindingType.RECORD)));
 
             case "Column" -> {
-                var column = resolveNew(node, BindingType.FIELD);
+                var column = context().declare(binding(node, BindingType.FIELD));
                 context().returnBinding(column);
                 node.prev("TableName").each().forEach(relation -> context().resolve(QualifiedName.of(name(relation))).ifPresent(r -> r.addChild(column)));
             }

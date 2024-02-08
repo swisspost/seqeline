@@ -14,7 +14,7 @@ public class Root extends Frame {
 
     @Override
     protected Optional<Binding> resolveLocal(QualifiedName qualifiedName) {
-        if(qualifiedName.isGlobal()) {
+        if(qualifiedName.isFunctional()) {
             var binding = new Binding(qualifiedName.getName(), BindingType.UNDEFINED);
             if (qualifiedName.getPrefix() != null) {
                 var parent = new Binding(qualifiedName.getPrefix(), BindingType.UNDEFINED);
