@@ -86,7 +86,7 @@ public class NodeProcessor {
             }
 
             case "SubqueryOperation" -> {
-                if(name(node).equals("UNION ALL")) {
+                if(node.parent("SelectStatement").isNotEmpty() && node.prevAll("SubqueryOperation").isEmpty()) {
                     stack.pop();
                 }
             }
