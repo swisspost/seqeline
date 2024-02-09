@@ -30,7 +30,7 @@ public class LexicalScope extends Frame {
         if(binding.getType() == BindingType.RELATION || binding.getType() == BindingType.PACKAGE) {
             result = super.declare(binding);
         } else {
-            declarations.add(binding);
+            result = declarations.add(binding);
         }
         if(owner != null &&
                 (binding.getType() == BindingType.ROUTINE ||
