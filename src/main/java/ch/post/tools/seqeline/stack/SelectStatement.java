@@ -31,7 +31,7 @@ public class SelectStatement extends Frame {
 
     @Override
     protected Optional<Binding> resolveLocal(QualifiedName qualifiedName) {
-        if(qualifiedName.isFunctional()) {
+        if(!qualifiedName.isDeclared()) {
             return selection.lookup(qualifiedName);
         } else {
             return Optional.empty();

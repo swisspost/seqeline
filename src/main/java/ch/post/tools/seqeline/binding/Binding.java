@@ -40,7 +40,8 @@ public class Binding {
     }
 
     public Binding addChild(Binding binding) {
-        return children.putIfAbsent(binding.getName(), binding);
+        children.putIfAbsent(binding.getName(), binding);
+        return children.get(binding.getName());
     }
 
     public void addOutput(Binding binding) {

@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.joox.Match;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @RequiredArgsConstructor
 public class NodeProcessor {
@@ -39,6 +40,25 @@ public class NodeProcessor {
             }
 
             case "FormalParameter" -> context().declare(binding(node, BindingType.PARAMETER));
+
+            case "FunctionCall" -> stack.execute(new RoutineCall(), processChildren(node));
+
+            case "FunctionName" -> {
+                var qualifiedName = QualifiedName.builder().type(BindingType.ROUTINE);
+                if(node.children().each().size() == 2) {
+                    qualifiedName.prefix(name(node.child(0))).name(name(node.child(1)));
+                } else {
+                    qualifiedName.name(name(node.child(0)));
+                }
+                context().returnBinding(context().resolve(qualifiedName.build()).orElseThrow());
+            }
+
+            case "ArgumentList" -> {
+                AtomicInteger position = new AtomicInteger(0);
+                // TODO: manage support named parameters
+                node.children().each().forEach(argument ->
+                        stack.execute(new Argument("["+position.incrementAndGet()+"]"), processChildren(argument)));
+            }
 
             case "OpenStatement" -> stack.execute(new Assignment(resolveNew(node.child(0), BindingType.CURSOR)),
                     processSiblings(node.child(0)));
@@ -96,7 +116,7 @@ public class NodeProcessor {
     }
 
     private Binding resolveNew(Match node, BindingType type) {
-        return context().resolve(QualifiedName.of(null, name(node), false)).or(() ->
+        return context().resolve(QualifiedName.of(null, name(node), true)).or(() ->
                 Optional.of(context().declare(binding(node, type)))).orElseThrow();
     }
 

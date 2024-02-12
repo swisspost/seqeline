@@ -14,10 +14,11 @@ public class Root extends Frame {
 
     @Override
     protected Optional<Binding> resolveLocal(QualifiedName qualifiedName) {
-        if(qualifiedName.isFunctional()) {
-            var binding = new Binding(qualifiedName.getName(), BindingType.UNDEFINED);
+        var type = Optional.ofNullable(qualifiedName.getType()).orElse(BindingType.UNDEFINED);
+        if(!qualifiedName.isDeclared()) {
+            var binding = new Binding(qualifiedName.getName(), type);
             if (qualifiedName.getPrefix() != null) {
-                var parent = new Binding(qualifiedName.getPrefix(), BindingType.UNDEFINED);
+                var parent = new Binding(qualifiedName.getPrefix(), BindingType.PACKAGE);
                 binding = bindings.add(parent).addChild(binding);
             } else {
                 binding = bindings.add(binding);
