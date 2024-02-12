@@ -3,21 +3,21 @@ package ch.post.tools.seqeline.stack;
 import ch.post.tools.seqeline.binding.Binding;
 import ch.post.tools.seqeline.binding.BindingType;
 
-public class Argument extends Frame {
+public class Wrapper extends Frame {
 
-    private final Binding argument;
+    private final Binding wrapper;
 
-    public Argument(String name) {
-        argument = new Binding(name, BindingType.ARGUMENT);
+    public Wrapper(Binding wrapper) {
+        this.wrapper = wrapper;
     }
 
     @Override
     public void returnBinding(Binding binding) {
-        binding.addOutput(argument);
+        binding.addOutput(wrapper);
     }
 
     @Override
     protected void pop() {
-        parent.returnBinding(argument);
+        parent.returnBinding(wrapper);
     }
 }

@@ -57,8 +57,11 @@ public class NodeProcessor {
                 AtomicInteger position = new AtomicInteger(0);
                 // TODO: manage support named parameters
                 node.children().each().forEach(argument ->
-                        stack.execute(new Argument("["+position.getAndIncrement()+"]"), processChildren(argument)));
+                        stack.execute(new Wrapper(new Binding("["+position.getAndIncrement()+"]", BindingType.ARGUMENT)), processChildren(argument)));
             }
+
+            case "ReturnStatement" ->
+                stack.execute(new Wrapper(new Binding("[return]", BindingType.RETURN)), processChildren(node));
 
             case "Assignment" ->
                 stack.execute(new Assignment(resolveNew(node.child(0), BindingType.VARIABLE)),

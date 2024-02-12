@@ -14,5 +14,5 @@ public enum BindingType {
     PARAMETER,
     CALL,
     ARGUMENT,
-    UNDEFINED
+    RETURN, UNDEFINED
 }

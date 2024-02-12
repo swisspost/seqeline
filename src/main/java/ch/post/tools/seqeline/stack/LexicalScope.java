@@ -25,9 +25,10 @@ public class LexicalScope extends Frame {
 
     @Override
     public void returnBinding(Binding binding) {
-        // don't record routine calls
-        if(binding.getType() != BindingType.CALL) {
-            parent.returnBinding(binding);
+        switch(binding.getType()) {
+            case CALL -> { /* don't record routine calls */ }
+            case RETURN -> binding.addOutput(owner);
+            default ->  parent.returnBinding(binding);
         }
      }
 
