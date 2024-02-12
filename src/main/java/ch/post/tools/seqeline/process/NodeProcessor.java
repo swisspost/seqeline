@@ -57,7 +57,17 @@ public class NodeProcessor {
                 AtomicInteger position = new AtomicInteger(0);
                 // TODO: manage support named parameters
                 node.children().each().forEach(argument ->
-                        stack.execute(new Argument("["+position.incrementAndGet()+"]"), processChildren(argument)));
+                        stack.execute(new Argument("["+position.getAndIncrement()+"]"), processChildren(argument)));
+            }
+
+            case "Assignment" ->
+                stack.execute(new Assignment(resolveNew(node.child(0), BindingType.VARIABLE)),
+                        processSiblings(node.child(0)));
+
+            case "IfStatement" -> {
+                // TODO: consider effects
+                stack.execute(new IgnoreReturn(), () -> process(node.child(0)));
+                processSiblings(node.child(0)).run();
             }
 
             case "OpenStatement" -> stack.execute(new Assignment(resolveNew(node.child(0), BindingType.CURSOR)),

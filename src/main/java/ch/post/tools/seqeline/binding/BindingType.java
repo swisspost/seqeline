@@ -12,6 +12,7 @@ public enum BindingType {
     PACKAGE,
     ROUTINE,
     PARAMETER,
+    CALL,
     ARGUMENT,
     UNDEFINED
 }

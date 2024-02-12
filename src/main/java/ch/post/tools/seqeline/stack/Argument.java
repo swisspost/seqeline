@@ -5,16 +5,19 @@ import ch.post.tools.seqeline.binding.BindingType;
 
 public class Argument extends Frame {
 
-    private String name;
+    private final Binding argument;
 
     public Argument(String name) {
-        this.name = name;
+        argument = new Binding(name, BindingType.ARGUMENT);
     }
 
     @Override
     public void returnBinding(Binding binding) {
-        var argument = new Binding(name, BindingType.ARGUMENT);
         binding.addOutput(argument);
-        super.returnBinding(argument);
+    }
+
+    @Override
+    protected void pop() {
+        parent.returnBinding(argument);
     }
 }

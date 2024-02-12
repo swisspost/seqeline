@@ -51,25 +51,26 @@ public class SelectStatement extends Frame {
                 outputs.add(returned);
             }
             case INPUTS -> (returned.getType() == BindingType.RELATION ? returned.children() : Stream.of(returned))
-                    .forEach(binding -> {
-                        selection.get(binding).ifPresent(binding::addOutput);
-                        inputs.add(binding);
-                    });
+                    .forEach(inputs::add);
             case EFFECTS -> {
                 if (returned.getType() == BindingType.RELATION) {
-                    returned.children().forEach(binding -> {
-                        selection.get(binding).ifPresent(binding::addOutput);
-                        inputs.add(binding);
-                    });
+                    returned.children().forEach(inputs::add);
                 } else {
                     var cause = inputs.get(returned)
                             .or(() -> outputs.get(returned))
+                            .or(() -> Optional.of(returned).filter(r -> r.getType() == BindingType.CALL))
                             .or(() -> parent.resolve(QualifiedName.of(null, returned.getName())))
                             .orElseThrow();
                     outputs.stream().forEach(cause::addEffect);
                 }
             }
         }
+    }
+
+    @Override
+    protected void pop() {
+        inputs.stream().forEach(binding ->
+                selection.get(binding).ifPresent(binding::addOutput));
     }
 
     public static class SelectList extends Frame {
@@ -87,13 +88,6 @@ public class SelectStatement extends Frame {
     }
 
     public static class EffectClause extends Frame {
-
-        BindingBag fields = new BindingBag();
-
-        @Override
-        public Binding declare(Binding binding) {
-            return fields.add(binding);
-        }
 
         @Override
         protected void push() {

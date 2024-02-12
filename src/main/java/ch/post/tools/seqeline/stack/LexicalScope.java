@@ -24,6 +24,14 @@ public class LexicalScope extends Frame {
     }
 
     @Override
+    public void returnBinding(Binding binding) {
+        // don't record routine calls
+        if(binding.getType() != BindingType.CALL) {
+            parent.returnBinding(binding);
+        }
+     }
+
+    @Override
     public Binding declare(Binding binding) {
         Binding result = binding;
         // Let global objects bubble up
