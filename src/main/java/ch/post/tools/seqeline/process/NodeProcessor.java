@@ -30,13 +30,24 @@ public class NodeProcessor {
                 stack.execute(new LexicalScope(pack), processChildren(node));
             }
 
-            case "VariableOrConstantDeclaratorId" ->
-                context().declare(binding(node, BindingType.VARIABLE));
-
+            case "VariableOrConstantDeclarator" -> {
+                var variable = binding(node.child(0), BindingType.VARIABLE);
+                context().declare(variable);
+                stack.execute(new Assignment(variable), processSiblings(node.child(0)));
+            }
             case "ProgramUnit" -> {
-                var routine = new Binding(node.attr("MethodName"), BindingType.ROUTINE);
+                var routine = new Binding(node.attr("MethodName").toLowerCase(), BindingType.ROUTINE);
                 context().declare(routine);
                 stack.execute(new LexicalScope(routine), processChildren(node));
+            }
+
+            case "CursorUnit" -> {
+                var cursor = new Binding(name(node.child(0)), BindingType.CURSOR);
+                context().declare(cursor);
+                stack.execute(new LexicalScope(cursor), () -> {
+                    process(node.child(1));
+                    stack.execute(new Wrapper(new Binding("[cursor]", BindingType.RETURN)), ()->process(node.child(2)));
+                });
             }
 
             case "FormalParameter" -> context().declare(binding(node, BindingType.PARAMETER));
@@ -63,21 +74,17 @@ public class NodeProcessor {
             case "ReturnStatement" ->
                 stack.execute(new Wrapper(new Binding("[return]", BindingType.RETURN)), processChildren(node));
 
-            case "Assignment" ->
-                stack.execute(new Assignment(resolveNew(node.child(0), BindingType.VARIABLE)),
-                        processSiblings(node.child(0)));
+            case "Assignment", "OpenStatement" ->
+                stack.execute(new Assignment(), processChildren(node));
 
-            case "IfStatement" -> {
+            case "IfStatement", "CaseWhenClause" -> {
                 // TODO: consider effects
                 stack.execute(new IgnoreReturn(), () -> process(node.child(0)));
                 processSiblings(node.child(0)).run();
             }
 
-            case "OpenStatement" -> stack.execute(new Assignment(resolveNew(node.child(0), BindingType.CURSOR)),
-                    processSiblings(node.child(0)));
-
-            case "CursorForLoopStatement" -> stack.execute(new LexicalScope(), () -> {
-                stack.execute(new Assignment(resolveNew(node.child(0), BindingType.RECORD)),
+            case "ForStatement", "CursorForLoopStatement" -> stack.execute(new LexicalScope(), () -> {
+                stack.execute(new Assignment(resolveNew(node.child(0), BindingType.STRUCTURE)),
                         () -> process(node.child(1)));
                 node.child(1).nextAll().each().forEach(this::process);
             });
@@ -108,14 +115,14 @@ public class NodeProcessor {
             case "TableName" -> {
                 var struct = schema.resolve(name(node))
                         .map(relation -> stack.root().declare(relation))
-                        .orElse(resolveNew(node, BindingType.RECORD));
+                        .orElse(resolveNew(node, BindingType.STRUCTURE));
                 if (!node.parent("TableReference").isEmpty()) {
                     context().returnBinding(struct);
                 }
             }
 
             case "Column" -> {
-                var column = context().declare(binding(node, BindingType.FIELD));
+                var column = resolveNew(node, BindingType.FIELD);
                 context().returnBinding(column);
                 node.prev("TableName").each().forEach(relation -> context().resolve(QualifiedName.of(name(relation))).ifPresent(r -> r.addChild(column)));
             }

@@ -5,7 +5,7 @@ public enum BindingType {
     FIELD,
     ALIAS,
     RESULT,
-    RECORD,
+    STRUCTURE,
     CURSOR,
     RELATION,
     COLUMN,
@@ -14,5 +14,6 @@ public enum BindingType {
     PARAMETER,
     CALL,
     ARGUMENT,
-    RETURN, UNDEFINED
+    RETURN,
+    UNDEFINED
 }

@@ -10,13 +10,14 @@ public class RoutineCall extends Frame {
     @Override
     public void returnBinding(Binding binding) {
         switch (binding.getType()) {
-            case ROUTINE -> {
+            case ROUTINE, CURSOR -> {
                 if(call == null) {
                     call = new Binding(binding.getName(), BindingType.CALL);
                     call.addReference(binding);
                     parent.returnBinding(call);
                 }
             }
+            case VARIABLE, FIELD -> parent.returnBinding(binding); // function call is actually array dereferencing
             case ARGUMENT -> binding.addOutput(call);
             default -> throw new IllegalStateException("Unexpected binding type");
         }
