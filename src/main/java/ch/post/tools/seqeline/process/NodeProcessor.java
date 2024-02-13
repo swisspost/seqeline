@@ -76,9 +76,11 @@ public class NodeProcessor {
             case "OpenStatement" -> stack.execute(new Assignment(resolveNew(node.child(0), BindingType.CURSOR)),
                     processSiblings(node.child(0)));
 
-            case "CursorForLoopStatement" -> stack.execute(new LexicalScope(), () ->
-                    stack.execute(new Assignment(resolveNew(node.child(0), BindingType.RECORD)),
-                    processSiblings(node.child(0))));
+            case "CursorForLoopStatement" -> stack.execute(new LexicalScope(), () -> {
+                stack.execute(new Assignment(resolveNew(node.child(0), BindingType.RECORD)),
+                        () -> process(node.child(1)));
+                node.child(1).nextAll().each().forEach(this::process);
+            });
 
             case "SelectStatement", "QueryBlock" -> stack.execute(new SelectStatement(), processChildren(node));
 
@@ -103,10 +105,14 @@ public class NodeProcessor {
                             }
                         }));
 
-            case "TableName" -> context().returnBinding(
-                    schema.resolve(name(node))
-                            .map(relation -> stack.root().declare(relation))
-                            .orElse(resolveNew(node, BindingType.RECORD)));
+            case "TableName" -> {
+                var struct = schema.resolve(name(node))
+                        .map(relation -> stack.root().declare(relation))
+                        .orElse(resolveNew(node, BindingType.RECORD));
+                if (!node.parent("TableReference").isEmpty()) {
+                    context().returnBinding(struct);
+                }
+            }
 
             case "Column" -> {
                 var column = context().declare(binding(node, BindingType.FIELD));

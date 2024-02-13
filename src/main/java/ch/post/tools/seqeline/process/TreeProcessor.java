@@ -20,10 +20,7 @@ import org.joox.Match;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.eclipse.rdf4j.model.util.Values.iri;
@@ -68,8 +65,16 @@ public class TreeProcessor {
         new NodeProcessor(stack, schema).process(root);
 
         Map<Binding, IRI> createdNodes = new HashMap<>();
+
+        stack.root().getBindings().stream().forEach(primary -> {
+                    var primaryName = primary.getName();
+                    primary.setGlobalName(primaryName);
+                    primary.children().forEach(secondary ->
+                        secondary.setGlobalName(primaryName + "." + secondary.getName()));
+                });
+
         stack.root().getBindings().stream().forEach(binding ->
-                createNode(modelBuilder, binding, 2, null, createdNodes));
+                createNode(modelBuilder, binding, createdNodes));
 
         Model model = modelBuilder.build();
         var out = new FileOutputStream(outputPath);
@@ -119,28 +124,25 @@ public class TreeProcessor {
         }
     }
 
-    private IRI createNode(ModelBuilder modelBuilder, Binding binding, int nameDepth, String prefix, Map<Binding, IRI> createdNodes) {
+    private IRI createNode(ModelBuilder modelBuilder, Binding binding, Map<Binding, IRI> createdNodes) {
         var existing = createdNodes.get(binding);
         if(existing != null) {
             return existing;
         }
-        if (prefix != null) {
-            prefix = prefix + ".";
-        } else {
-            prefix = "";
-        }
-        var name = nameDepth > 0 ? prefix + binding.getName().toLowerCase() : "binding:" + binding.getId();
+        var name = Optional.ofNullable(binding.getGlobalName()).orElse("binding:" + binding.getId());
         var nodeIri = iri(line_data, name);
         createdNodes.put(binding, nodeIri);
 
         modelBuilder.add(nodeIri, RDF.TYPE, iri(line, capitalize(binding.getType().toString())));
         modelBuilder.add(nodeIri, RDFS.LABEL, literal(binding.getName().toLowerCase()));
         binding.children().forEach(child ->
-                modelBuilder.add(nodeIri, iri(line, "member"), createNode(modelBuilder, child, nameDepth - 1, name, createdNodes)));
+                modelBuilder.add(nodeIri, iri(line, "member"), createNode(modelBuilder, child, createdNodes)));
         binding.outputs().forEach(output ->
-                modelBuilder.add(nodeIri, iri(line, "output"), createNode(modelBuilder, output, 0, null, createdNodes)));
+                modelBuilder.add(nodeIri, iri(line, "output"), createNode(modelBuilder, output, createdNodes)));
         binding.effects().forEach(effect ->
-                modelBuilder.add(nodeIri, iri(line, "effect"), createNode(modelBuilder, effect, 0, null, createdNodes)));
+                modelBuilder.add(nodeIri, iri(line, "effect"), createNode(modelBuilder, effect, createdNodes)));
+        binding.references().forEach(reference ->
+                modelBuilder.add(nodeIri, iri(line, "reference"), createNode(modelBuilder, reference, createdNodes)));
         return nodeIri;
     }
 

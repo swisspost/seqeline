@@ -56,12 +56,7 @@ public class SelectStatement extends Frame {
                 if (returned.getType() == BindingType.RELATION) {
                     returned.children().forEach(inputs::add);
                 } else {
-                    var cause = inputs.get(returned)
-                            .or(() -> outputs.get(returned))
-                            .or(() -> Optional.of(returned).filter(r -> r.getType() == BindingType.CALL))
-                            .or(() -> parent.resolve(QualifiedName.of(null, returned.getName())))
-                            .orElseThrow();
-                    outputs.stream().forEach(cause::addEffect);
+                    outputs.stream().forEach(returned::addEffect);
                 }
             }
         }

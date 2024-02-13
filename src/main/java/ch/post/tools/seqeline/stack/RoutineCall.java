@@ -13,9 +13,7 @@ public class RoutineCall extends Frame {
             case ROUTINE -> {
                 if(call == null) {
                     call = new Binding(binding.getName(), BindingType.CALL);
-                    // TODO: use another relationship (reference)
-                    binding.addOutput(call);
-                    call.addOutput(binding);
+                    call.addReference(binding);
                     parent.returnBinding(call);
                 }
             }

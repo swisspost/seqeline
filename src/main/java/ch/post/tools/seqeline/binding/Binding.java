@@ -4,6 +4,7 @@ import ch.post.tools.seqeline.stack.QualifiedName;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,11 +24,17 @@ public class Binding {
     @Getter
     private final BindingType type;
 
+    @Getter
+    @Setter
+    private String globalName;
+
     private final Map<String, Binding> children = new HashMap<>();
 
     private final Set<Binding> outputs = new HashSet<>();
 
     private final Set<Binding> effects = new HashSet<>();
+
+    private final Set<Binding> references = new HashSet<>();
 
     public Optional<Binding> match(QualifiedName qualifiedName) {
         if(name.equals(qualifiedName.getPrefix())) {
@@ -52,6 +59,10 @@ public class Binding {
         effects.add(binding);
     }
 
+    public void addReference(Binding binding) {
+        references.add(binding);
+    }
+
     public Stream<Binding> children() {
         return children.values().stream();
     }
@@ -63,4 +74,9 @@ public class Binding {
     public Stream<Binding> effects() {
         return effects.stream();
     }
+
+    public Stream<Binding> references() {
+        return references.stream();
+    }
+
 }
