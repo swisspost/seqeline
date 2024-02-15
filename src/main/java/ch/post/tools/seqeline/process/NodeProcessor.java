@@ -96,6 +96,13 @@ public class NodeProcessor {
                             QualifiedName.of(name(node.child("IntoClause").child("VariableName")))).orElseThrow()),
                             () -> stack.execute(new SelectStatement(), processChildren(node)));
 
+            case "WithClause" ->
+                node.children("Name").each().forEach(child -> {
+                    var name = binding(child, BindingType.STRUCTURE);
+                    stack.execute(new Children(name), ()->process(child.next()));
+                    context().declare(name);
+                });
+
             case "SelectList" ->
                 stack.execute(new SelectStatement.SelectList(), () ->
                         node.children().each().forEach(child -> {

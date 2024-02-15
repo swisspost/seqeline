@@ -50,8 +50,11 @@ public class SelectStatement extends Frame {
                 parent.returnBinding(returned);
                 outputs.add(returned);
             }
-            case INPUTS -> (returned.getType() == BindingType.RELATION ? returned.children() : Stream.of(returned))
-                    .forEach(inputs::add);
+            case INPUTS ->
+                    (switch (returned.getType()) {
+                        case RELATION, STRUCTURE -> returned.children();
+                        default -> Stream.of(returned);
+                    }).forEach(inputs::add);
             case EFFECTS -> {
                 if (returned.getType() == BindingType.RELATION) {
                     returned.children().forEach(inputs::add);
