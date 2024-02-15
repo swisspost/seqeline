@@ -7,6 +7,7 @@ import ch.post.tools.seqeline.stack.*;
 import lombok.RequiredArgsConstructor;
 import org.joox.Match;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -89,12 +90,14 @@ public class NodeProcessor {
                 node.child(1).nextAll().each().forEach(this::process);
             });
 
-            case "SelectStatement", "QueryBlock" -> stack.execute(new SelectStatement(), processChildren(node));
-
-            case "SelectIntoStatement" ->
-                    stack.execute(new Assignment(context().resolve(
-                            QualifiedName.of(name(node.child("IntoClause").child("VariableName")))).orElseThrow()),
+            case "SelectIntoStatement", "SelectStatement", "QueryBlock" -> {
+                if (node.child("IntoClause").isNotEmpty()) {
+                    stack.execute(new MultipleAssignment(intoVariables(node)),
                             () -> stack.execute(new SelectStatement(), processChildren(node)));
+                } else {
+                    stack.execute(new SelectStatement(), processChildren(node));
+                }
+            }
 
             case "WithClause" ->
                 node.children("Name").each().forEach(child -> {
@@ -146,6 +149,15 @@ public class NodeProcessor {
 
             default -> processChildren(node).run();
         }
+    }
+
+    private List<Binding> intoVariables(Match node) {
+        var vars = node.child("IntoClause").children("VariableName").each();
+        return vars.stream()
+                .map(this::name)
+                .map(QualifiedName::of)
+                .map(t -> context().resolve(t).orElseThrow())
+                .toList();
     }
 
     private Binding resolveNew(Match node, BindingType type) {
