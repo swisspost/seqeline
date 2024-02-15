@@ -135,6 +135,8 @@ public class TreeProcessor {
 
         modelBuilder.add(nodeIri, RDF.TYPE, iri(line, capitalize(binding.getType().toString())));
         modelBuilder.add(nodeIri, RDFS.LABEL, literal(binding.getName().toLowerCase()));
+        Optional.ofNullable(binding.getPosition()).ifPresent(position ->
+                modelBuilder.add(nodeIri, iri(line, "position"), literal(position)));
         binding.children().forEach(child ->
                 modelBuilder.add(nodeIri, iri(line, "member"), createNode(modelBuilder, child, createdNodes)));
         binding.outputs().forEach(output ->

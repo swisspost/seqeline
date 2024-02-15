@@ -28,6 +28,9 @@ public class Binding {
     @Setter
     private String globalName;
 
+    @Getter
+    private Integer position = null;
+
     private final Map<String, Binding> children = new HashMap<>();
 
     private final Set<Binding> outputs = new HashSet<>();
@@ -79,4 +82,8 @@ public class Binding {
         return references.stream();
     }
 
+    public Binding position(int position) {
+        this.position = position;
+        return this;
+    }
 }

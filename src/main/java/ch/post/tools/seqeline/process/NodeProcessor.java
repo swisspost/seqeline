@@ -51,7 +51,12 @@ public class NodeProcessor {
                 });
             }
 
-            case "FormalParameter" -> context().declare(binding(node, BindingType.PARAMETER));
+            case "FormalParameters" -> {
+                var i = new AtomicInteger(0);
+                node.children("FormalParameter").each().stream()
+                        .map(param -> binding(param, BindingType.PARAMETER).position(i.getAndIncrement()))
+                        .forEach(param -> context().declare(param));
+            }
 
             case "FunctionCall" -> stack.execute(new RoutineCall(), processChildren(node));
 
@@ -67,9 +72,13 @@ public class NodeProcessor {
 
             case "ArgumentList" -> {
                 AtomicInteger position = new AtomicInteger(0);
-                // TODO: manage support named parameters
-                node.children().each().forEach(argument ->
-                        stack.execute(new Wrapper(new Binding("["+position.getAndIncrement()+"]", BindingType.ARGUMENT)), processChildren(argument)));
+                node.children().each().forEach(argument -> {
+                    if(argument.child("UnqualifiedID").isEmpty()) {
+                        stack.execute(new Wrapper(new Binding("["+position+"]", BindingType.ARGUMENT).position(position.getAndIncrement())), processChildren(argument));
+                    } else {
+                        stack.execute(new Wrapper(binding(argument.child("UnqualifiedID"), BindingType.ARGUMENT)), processChildren(argument));
+                    }
+                });
             }
 
             case "ReturnStatement" ->
