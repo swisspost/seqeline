@@ -43,11 +43,11 @@ public class NodeProcessor {
             }
 
             case "CursorUnit" -> {
-                var cursor = new Binding(name(node.child(0)), BindingType.CURSOR);
+                var cursor = new Binding(name(node.child("ID")), BindingType.CURSOR);
                 context().declare(cursor);
                 stack.execute(new LexicalScope(cursor), () -> {
-                    process(node.child(1));
-                    stack.execute(new Wrapper(new Binding("[cursor]", BindingType.RETURN)), ()->process(node.child(2)));
+                    process(node.child("FormalParameters"));
+                    stack.execute(new Wrapper(new Binding("[cursor]", BindingType.RETURN)), ()->process(node.child("SelectStatement")));
                 });
             }
 
