@@ -42,14 +42,6 @@ public class NodeProcessor {
                 stack.execute(new LexicalScope(routine), processChildren(node));
             }
 
-            case "CursorUnit" -> {
-                var cursor = new Binding(name(node.child("ID")), BindingType.CURSOR);
-                context().declare(cursor);
-                stack.execute(new LexicalScope(cursor), () -> {
-                    process(node.child("FormalParameters"));
-                    stack.execute(new Wrapper(new Binding("[cursor]", BindingType.RETURN)), ()->process(node.child("SelectStatement")));
-                });
-            }
 
             case "FormalParameters" -> {
                 var i = new AtomicInteger(0);
@@ -83,6 +75,22 @@ public class NodeProcessor {
 
             case "ReturnStatement" ->
                 stack.execute(new Wrapper(new Binding("[return]", BindingType.RETURN)), processChildren(node));
+
+            case "CursorUnit" -> {
+                var cursor = new Binding(name(node.child("ID")), BindingType.CURSOR);
+                context().declare(cursor);
+                stack.execute(new LexicalScope(cursor), () -> {
+                    process(node.child("FormalParameters"));
+                    stack.execute(new Wrapper(new Binding("[cursor]", BindingType.RETURN)), ()->process(node.child("SelectStatement")));
+                });
+            }
+
+            case "FetchStatement" -> {
+                var source = resolveExisting(node.child("QualifiedName"));
+                node.children("Expression").find("Column").each().stream()
+                        .map(this::resolveExisting)
+                        .forEach(source::addOutput);
+            }
 
             case "Assignment", "OpenStatement" ->
                 stack.execute(new Assignment(), processChildren(node));
@@ -172,6 +180,10 @@ public class NodeProcessor {
     private Binding resolveNew(Match node, BindingType type) {
         return context().resolve(QualifiedName.of(null, name(node), true)).or(() ->
                 Optional.of(context().declare(binding(node, type)))).orElseThrow();
+    }
+
+    private Binding resolveExisting(Match node) {
+        return context().resolve(QualifiedName.of(null, name(node), true)).orElseThrow();
     }
 
     private Binding binding(Match node, BindingType type) {
