@@ -11,12 +11,29 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class Children extends Frame {
 
-    private final Binding parent;
+    private Binding owner;
+
+    private boolean returns = false;
+
+    public Children(Binding owner) {
+        this.owner = owner;
+    }
+
+    public Children(boolean returns) {
+        this.returns = returns;
+    }
 
     @Override
     public void returnBinding(Binding binding) {
-        if(binding.getType() != BindingType.RELATION) {
-            parent.addChild(binding);
+        if(owner == null) {
+            owner = binding;
+        } else {
+            if (binding.getType() != BindingType.RELATION) {
+                owner.addChild(binding);
+            }
+            if(returns) {
+                parent.returnBinding(binding);
+            }
         }
     }
 }

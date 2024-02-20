@@ -4,12 +4,15 @@ import ch.post.tools.seqeline.binding.Binding;
 import ch.post.tools.seqeline.binding.BindingType;
 import ch.post.tools.seqeline.catalog.Schema;
 import ch.post.tools.seqeline.stack.*;
+import com.google.common.collect.Streams;
 import lombok.RequiredArgsConstructor;
 import org.joox.Match;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 public class NodeProcessor {
@@ -139,6 +142,18 @@ public class NodeProcessor {
                             }
                         }));
 
+            case "SingleTableInsert" -> {
+                var tableName = name(node.child("InsertIntoClause").find("TableName"));
+                var table = stack.root().declare(schema.resolve(tableName).orElse(new Binding(tableName, BindingType.RELATION)));
+                Stream<Binding> targets = node.child("InsertIntoClause").find("Column").each().stream()
+                        .map(column -> binding(column, BindingType.COLUMN))
+                        .map(table::addChild);
+                Stream<Match> sources = node.child("ValuesClause").children().each().stream();
+
+                Streams.zip(sources, targets, Map::entry)
+                        .forEach(entry -> stack.execute(new Assignment(entry.getValue()), () -> process(entry.getKey())));
+            }
+
             case "TableName" -> {
                 var struct = schema.resolve(name(node))
                         .map(relation -> stack.root().declare(relation))
@@ -152,6 +167,18 @@ public class NodeProcessor {
                 var column = resolveNew(node, BindingType.FIELD);
                 context().returnBinding(column);
                 node.prev("TableName").each().forEach(relation -> context().resolve(QualifiedName.of(name(relation))).ifPresent(r -> r.addChild(column)));
+            }
+
+            case "PrimaryExpression" ->
+                stack.execute(new Children(true), processChildren(node));
+
+            case "PrimarySuffix" -> {
+                var id = node.child("QualifiedID");
+                if(id.isNotEmpty()) {
+                    context().returnBinding(binding(id, BindingType.FIELD));
+                } else {
+                    processChildren(node).run();
+                }
             }
 
             case "JoinClause", "WhereClause" -> {
