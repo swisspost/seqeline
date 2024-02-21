@@ -29,7 +29,8 @@ public class NodeProcessor {
             case "PackageSpecification" -> skip();
 
             case "PackageBody" -> {
-                var pack = new Binding(name(node), BindingType.PACKAGE);
+                var name = name(node.child("ObjectNameDeclaration").children().last());
+                var pack = new Binding(name, BindingType.PACKAGE);
                 context().declare(pack);
                 stack.execute(new LexicalScope(pack), processChildren(node));
             }
