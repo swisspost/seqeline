@@ -87,38 +87,40 @@ public class TreeProcessor {
         writer.endRDF();
         out.close();
 
-        URL url = new URL("http://localhost:7200/rest/repositories/lineage/import/upload/url");
-        String sourceUrl = "http://localhost:8000/out.trig";
-        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-        con.setRequestMethod("POST");
-        con.setRequestProperty("Content-Type", "application/json");
-        con.setDoOutput(true);
+        if(System.getenv().containsKey("SEQELINE_GRAPH_IMPORT")) {
+            URL url = new URL("http://localhost:7200/rest/repositories/lineage/import/upload/url");
+            String sourceUrl = "http://localhost:8000/out.trig";
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("POST");
+            con.setRequestProperty("Content-Type", "application/json");
+            con.setDoOutput(true);
 
-        var mapper = new ObjectMapper();
-        var request = mapper.createObjectNode();
-        var graphs = mapper.createArrayNode();
-        var fileNames = mapper.createArrayNode();
-        fileNames.add(new File(outputPath).getAbsolutePath());
-        request.set("data", new TextNode(sourceUrl));
-        request.set("name", new TextNode(sourceUrl));
-        graphs.add(graphName);
-        request.set("replaceGraphs", graphs);
+            var mapper = new ObjectMapper();
+            var request = mapper.createObjectNode();
+            var graphs = mapper.createArrayNode();
+            var fileNames = mapper.createArrayNode();
+            fileNames.add(new File(outputPath).getAbsolutePath());
+            request.set("data", new TextNode(sourceUrl));
+            request.set("name", new TextNode(sourceUrl));
+            graphs.add(graphName);
+            request.set("replaceGraphs", graphs);
 
-        try (OutputStream os = con.getOutputStream()) {
-            mapper.writeValue(os, request);
-        }
+            try (OutputStream os = con.getOutputStream()) {
+                mapper.writeValue(os, request);
+            }
 
-        if (con.getResponseCode() != 200) {
-            InputStream err = con.getErrorStream();
-            if (err != null) {
-                try (BufferedReader br = new BufferedReader(
-                        new InputStreamReader(err, "utf-8"))) {
-                    StringBuilder response = new StringBuilder();
-                    String responseLine = null;
-                    while ((responseLine = br.readLine()) != null) {
-                        response.append(responseLine.trim());
+            if (con.getResponseCode() != 200) {
+                InputStream err = con.getErrorStream();
+                if (err != null) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(err, "utf-8"))) {
+                        StringBuilder response = new StringBuilder();
+                        String responseLine = null;
+                        while ((responseLine = br.readLine()) != null) {
+                            response.append(responseLine.trim());
+                        }
+                        log.info(response.toString());
                     }
-                    log.info(response.toString());
                 }
             }
         }
