@@ -24,3 +24,9 @@ for path in $SOURCE; do
     cp $TMP_ERR $MODEL_DIR/$filename.err.txt
   fi
 done
+
+#for i in data/model/*.xml; do
+#   mvn exec:java -Dexec.mainClass=ch.post.tools.seqeline.Main -Dexec.args="post.ch padasa $i"
+#   output=$(basename $i)
+#   cp target/out.trig data/target/${output/.sql.xml/.trig}
+#done
