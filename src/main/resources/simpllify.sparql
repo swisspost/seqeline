@@ -1,0 +1,84 @@
+PREFIX line: <https://schema.post.ch/lineage/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+construct {
+    ?s line:output ?o .
+    ?o line:output ?a .
+} where {
+
+    filter(
+    regex(?label, "h", "i" )
+    )
+
+    # Shortcut links between source and targets with same name
+    ?s rdfs:label ?label .
+    ?o rdfs:label ?label .
+
+    ?s rdf:type ?type .
+
+    filter(
+    ?type = line:Column ||
+    ?type = line:Field ||
+    ?type = line:Variable ||
+    ?type = line:Alias ||
+    ?type = line:Result
+    )
+
+    optional
+    {
+        ?o line:output+ ?a .
+        ?a rdf:type ?atype .
+        filter(
+        ?atype = line:Column ||
+        ?atype = line:Field ||
+        ?atype = line:Variable ||
+        ?atype = line:Alias ||
+        ?atype = line:Result
+        )
+    }
+
+    {
+        ?s line:output* ?argument .
+
+        {
+            # Shortcut arguments to parameters
+            ?argument line:position ?position .
+            ?argument line:output ?call .
+            ?call line:reference ?routine .
+            ?routine rdf:type line:Routine .
+            ?routine line:member ?parameter .
+            ?parameter rdf:type line:Parameter .
+            ?parameter line:position ?position .
+        }
+
+        ?parameter line:output* ?o
+    }
+    union
+    {
+        ?s line:output* ?field .
+        ?in_rec line:member ?field .
+        ?in_rec line:output+ ?argument .
+
+        {
+            # Shortcut arguments to parameters
+            ?argument line:position ?position .
+            ?argument line:output ?call .
+            ?call line:reference ?routine .
+            ?routine rdf:type line:Routine .
+            ?routine line:member ?parameter .
+            ?parameter rdf:type line:Parameter .
+            ?parameter line:position ?position .
+        }
+
+        ?parameter line:output* ?out_rec .
+        ?out_rec line:member ?o .
+    }
+    union
+    {
+        ?s line:output+ ?cursor .
+        ?cursor rdf:type line:Cursor .
+        ?call line:reference ?cursor .
+        ?call line:output+ ?struct .
+        ?struct line:member ?o .
+    }
+}

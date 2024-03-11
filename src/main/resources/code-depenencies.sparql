@@ -1,0 +1,24 @@
+PREFIX line: <https://schema.post.ch/lineage/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+construct {
+    ?package line:member ?routine .
+    ?package2 line:member ?source .
+    ?source line:dependency ?target  .
+} where {
+    {
+        ?package line:member ?routine .
+        ?package rdf:type line:Package .
+        ?routine rdf:type line:Routine .
+        filter exists { ?p line:reference ?routine }
+    }
+    union
+    {
+        ?package2 line:member ?source .
+        ?source rdf:type line:Routine .
+        ?source (line:member|line:output|line:reference)+ ?target .
+        ?target rdf:type line:Routine .
+        filter exists { ?p line:member ?target }
+        filter (?source != ?target)
+    }
+}
