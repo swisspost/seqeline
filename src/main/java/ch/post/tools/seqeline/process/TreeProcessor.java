@@ -20,8 +20,9 @@ import org.joox.Match;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.eclipse.rdf4j.model.util.Values.iri;
 import static org.eclipse.rdf4j.model.util.Values.literal;
@@ -42,13 +43,12 @@ public class TreeProcessor {
     private Schema schema;
 
     @SneakyThrows
-    public TreeProcessor(String domain, String scope, String inputPath, Schema schema) {
+    public TreeProcessor(String domain, String scope, String name, Match root, Schema schema) {
         this.schema = schema;
-        root = $(new File(inputPath));
-        var lastSeparator = inputPath.lastIndexOf(File.separator);
+        this.root = root;
         line = "https://schema."+domain+"/lineage/";
         line_data = "https://data."+domain+"/" + scope + "/lineage/";
-        localScope = inputPath.substring(lastSeparator + 1).replace(".xml", "");
+        localScope = name;
         graphName = "https://graph." + domain + "/" + scope + "/lineage/" + localScope;
         modelBuilder = new ModelBuilder()
                 .namedGraph(graphName)
@@ -59,7 +59,7 @@ public class TreeProcessor {
     }
 
     @SneakyThrows
-    public void process(String outputPath) {
+    public String process(OutputStream out) {
 
         Stack stack = new Stack();
         new NodeProcessor(stack, schema).process(root);
@@ -77,7 +77,7 @@ public class TreeProcessor {
                 createNode(modelBuilder, binding, createdNodes));
 
         Model model = modelBuilder.build();
-        var out = new FileOutputStream(outputPath);
+
         RDFWriter writer = Rio.createWriter(RDFFormat.TRIG, out);
         writer.startRDF();
         model.getNamespaces().forEach(ns -> writer.handleNamespace(ns.getPrefix(), ns.getName()));
@@ -85,46 +85,9 @@ public class TreeProcessor {
             writer.handleStatement(statement);
         }
         writer.endRDF();
-        out.close();
-
-        if(System.getenv().containsKey("SEQELINE_GRAPH_IMPORT")) {
-            URL url = new URL("http://localhost:7200/rest/repositories/lineage/import/upload/url");
-            String sourceUrl = "http://localhost:8000/out.trig";
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.setRequestMethod("POST");
-            con.setRequestProperty("Content-Type", "application/json");
-            con.setDoOutput(true);
-
-            var mapper = new ObjectMapper();
-            var request = mapper.createObjectNode();
-            var graphs = mapper.createArrayNode();
-            var fileNames = mapper.createArrayNode();
-            fileNames.add(new File(outputPath).getAbsolutePath());
-            request.set("data", new TextNode(sourceUrl));
-            request.set("name", new TextNode(sourceUrl));
-            graphs.add(graphName);
-            request.set("replaceGraphs", graphs);
-
-            try (OutputStream os = con.getOutputStream()) {
-                mapper.writeValue(os, request);
-            }
-
-            if (con.getResponseCode() != 200) {
-                InputStream err = con.getErrorStream();
-                if (err != null) {
-                    try (BufferedReader br = new BufferedReader(
-                            new InputStreamReader(err, "utf-8"))) {
-                        StringBuilder response = new StringBuilder();
-                        String responseLine = null;
-                        while ((responseLine = br.readLine()) != null) {
-                            response.append(responseLine.trim());
-                        }
-                        log.info(response.toString());
-                    }
-                }
-            }
-        }
+        return graphName;
     }
+
 
     private IRI createNode(ModelBuilder modelBuilder, Binding binding, Map<Binding, IRI> createdNodes) {
         var existing = createdNodes.get(binding);

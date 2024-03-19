@@ -1,163 +1,167 @@
 package ch.post.tools.seqeline;
 
 import ch.post.tools.seqeline.catalog.Schema;
+import ch.post.tools.seqeline.parser.Parser;
 import ch.post.tools.seqeline.process.TreeProcessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.TextNode;
 import lombok.SneakyThrows;
-import lombok.extern.java.Log;
-import org.antlr.grammars.plsql.PlSqlLexer;
-import org.antlr.grammars.plsql.PlSqlParser;
-import org.antlr.v4.runtime.*;
-import org.antlr.v4.runtime.tree.*;
-import org.apache.commons.text.StringEscapeUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.joox.Match;
 import org.xml.sax.SAXException;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 import java.io.*;
-import java.util.Set;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.stream.Stream;
 
-@Log
-public class Main {
-    public static void main(String[] args) throws IOException, SAXException {
-        if(args.length > 0 && args[0].equals("-p")) {
+import static org.joox.JOOX.$;
 
-            InputStream inputStream = new FileInputStream(args[1]);
 
-            var lexer = new PlSqlLexer(CharStreams.fromStream(inputStream));
-            var tokenStream = new CommonTokenStream(lexer);
-            var parser = new PlSqlParser(tokenStream);
-            var parseTree = parser.sql_script();
-            var walker = new ParseTreeWalker();
+@Command(name = "sequeline", description = "Generate RDF data lineage graph from PL/SQL code.")
+@Slf4j
+public class Main implements Callable<Integer> {
 
-            var out = args.length > 2 ?  new FileOutputStream(args[2]) : System.out;
-            var writer = new BufferedWriter(new OutputStreamWriter(out));
-            writer.write("<?xml version=\"1.0\"?>");
-            writer.newLine();
-            var listener = new ParseTreeListener() {
+    @Parameters(description = "Source files or directories", arity = "1..*")
+    private List<File> paths;
 
-                private String indent =  "";
-                private boolean showTerminal = false;
-                private int ignoreDepth = 0;
+    @Option(names = {"-d", "--domain"}, description = "Cache directory for parse trees", defaultValue = "")
+    private String domain;
 
-                @SneakyThrows
-                @Override
-                public void visitTerminal(TerminalNode terminalNode) {
-                    if(showTerminal) {
-                        writer.write(indent + StringEscapeUtils.escapeXml11(terminalNode.toString()));
-                        writer.newLine();
-                    }
+    @Option(names = {"-a", "--application"}, description = "Application name", defaultValue = "app")
+    private String application;
+
+    @Option(names = {"-c", "--cache-dir"}, description = "Cache directory for parse trees", defaultValue = "target/sequeline/tree")
+    private File cacheDir;
+
+    @Option(names = {"-o", "--output-dir"}, description = "Output directory for graphs", defaultValue = "target/sequeline/graph")
+    private File outputDir;
+
+    @Option(names = {"-t", "--tree-only"}, description = "Only generate tree")
+    private boolean treeOnly;
+
+    @Option(names = {"-f", "--force"}, description = "Ignore cached files and force generation")
+    private boolean force;
+
+    @Option(names = {"-p", "--publish"}, description = "Publish to localhost Graph DB")
+    private boolean publish;
+
+    private static final String extension = "\\.[^\\.]+$";
+
+    @Override
+    public Integer call() throws Exception {
+        Schema schema = new Schema("data/model/metadata.json");
+        cacheDir.mkdirs();
+        outputDir.mkdirs();
+
+        var files = paths.stream().flatMap(path -> {
+            if (path.isFile()) {
+                return Stream.of(path.getAbsoluteFile());
+            } else {
+                try (Stream<Path> stream = Files.walk(Paths.get(path.getAbsolutePath()))) {
+                    return stream.filter(file -> !Files.isDirectory(file))
+                            .map(Path::toFile)
+                            .toList()
+                            .stream();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
-
-                @Override
-                public void visitErrorNode(ErrorNode errorNode) {
-                    throw new RuntimeException(errorNode.toString());
-                }
-
-                @SneakyThrows
-                @Override
-                public void enterEveryRule(ParserRuleContext parserRuleContext) {
-                    var name = name(parser, parserRuleContext);
-                    if(ignore(name)) {
-                        ignoreDepth++;
-                    }
-                    if(ignoreDepth == 0) {
-                        if (show(name)) {
-                            writer.write(indent + "<" + name + ">");
-                            writer.newLine();
-                            indent = indent + "  ";
-                        }
-                    }
-                    if(terminal(name)) {
-                        showTerminal = true;
-                    }
-                }
-
-                @SneakyThrows
-                @Override
-                public void exitEveryRule(ParserRuleContext parserRuleContext) {
-                    var name = name(parser, parserRuleContext);
-                    if(ignoreDepth == 0) {
-                        if (show(name)) {
-                            indent = indent.substring(0, indent.length() - 2);
-                            writer.write(indent + "</" + name + ">");
-                            writer.newLine();
-                        }
-                    }
-                    if(ignore(name)) {
-                        ignoreDepth--;
-                    }
-                    if(terminal(name)) {
-                        showTerminal = false;
-                    }
-                }
-            };
-            walker.walk(listener, parseTree);
-            writer.flush();
-
-        } else {
-            if (args.length < 3) {
-                log.severe("seqeline <domain> <application> <filename>");
-                System.exit(1);
             }
-            Schema schema = new Schema("data/model/metadata.json");
-            new TreeProcessor(args[0], args[1], args[2], schema).process("target/out.trig");
+        }).toList();
+
+
+        for (var sourceFile : files) {
+            var treeFile = new File(cacheDir, sourceFile.getName().replaceAll(extension, ".xml"));
+            var tree = makeTree(sourceFile, treeFile);
+            var graphFile = new File(outputDir, sourceFile.getName().replaceAll(extension, ".trig"));
+            if(force || shouldGenerate(treeFile, graphFile) && !treeOnly) {
+                log.info("Generating graph ...");
+                String graphName;
+                try (var out = new FileOutputStream(graphFile)) {
+                    graphName = new TreeProcessor(domain, application, sourceFile.getName().replaceAll(extension,""), tree, schema).process(out);
+                }
+                if(publish) {
+                    publishToGraphDb(graphName, graphFile);
+                }
+            } else {
+                log.info("Graph already up-to-date.");
+            }
+        }
+        log.info("done.");
+        return 0;
+    }
+
+    @SneakyThrows
+    private Match makeTree(File source, File target) {
+        Match result;
+        log.info("Processing "+source+" ...");
+        if(force || shouldGenerate(source, target)) {
+            try(var out = new FileOutputStream(target)) {
+                try(var in = new FileInputStream(source)) {
+                    result = new Parser().parse(in);
+                }
+                result.write(out);
+            }
+        } else {
+            log.info("Using cached tree.");
+            result = $(target);
+        }
+        return result;
+    }
+
+    private boolean shouldGenerate(File source, File target) {
+        return !target.exists() || source.lastModified() > target.lastModified();
+    }
+
+    @SneakyThrows
+    private void publishToGraphDb(String graphName, File graphFile) {
+        URL url = new URL("http://localhost:7200/rest/repositories/lineage/import/upload/url");
+        String sourceUrl = "http://localhost:8000/"+graphFile;
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setRequestMethod("POST");
+        con.setRequestProperty("Content-Type", "application/json");
+        con.setDoOutput(true);
+
+        var mapper = new ObjectMapper();
+        var request = mapper.createObjectNode();
+        var graphs = mapper.createArrayNode();
+        var fileNames = mapper.createArrayNode();
+        fileNames.add(graphFile.getAbsolutePath());
+        request.set("data", new TextNode(sourceUrl));
+        request.set("name", new TextNode(sourceUrl));
+        graphs.add(graphName);
+        request.set("replaceGraphs", graphs);
+
+        try (OutputStream os = con.getOutputStream()) {
+            mapper.writeValue(os, request);
+        }
+
+        if (con.getResponseCode() != 200) {
+            InputStream err = con.getErrorStream();
+            if (err != null) {
+                try (BufferedReader br = new BufferedReader(
+                        new InputStreamReader(err, "utf-8"))) {
+                    StringBuilder response = new StringBuilder();
+                    String responseLine = null;
+                    while ((responseLine = br.readLine()) != null) {
+                        response.append(responseLine.trim());
+                    }
+                    log.info(response.toString());
+                }
+            }
         }
     }
 
-    private static String name(PlSqlParser parser, ParserRuleContext parserRuleContext) {
-        return parserRuleContext.toString(parser, parserRuleContext.getParent())
-                .replaceAll("[\\[\\]]", "")
-                .trim();
+    public static void main(String... args) throws IOException, SAXException {
+        System.exit(new CommandLine(new Main()).execute(args));
     }
-
-    private static boolean show(String name) {
-        return !skipped.contains(name);
-    }
-
-    private static boolean ignore(String name) {
-        return ignored.contains(name);
-    }
-
-    private static boolean terminal(String name) {
-        return terminal.contains(name);
-    }
-
-    private static Set<String> terminal = Set.of(
-            "id_expression",
-            "constant"
-    );
-
-    private static Set<String> ignored = Set.of(
-            "type_spec",
-            "exception_declaration"
-    );
-
-    private static Set<String> skipped = Set.of(
-            "unit_statement",
-            "package_obj_spec",
-            "package_obj_body",
-            "atom",
-            "standard_function",
-            "seq_of_declare_specs",
-            "declare_spec",
-            "select_statement",
-
-            "regular_id",
-            "non_reserved_keywords_pre12c",
-
-            "model_expression",
-            "logical_expression",
-            "multiset_expression",
-            "unary_logical_expression",
-            "relational_expression",
-            "compound_expression",
-            "unary_expression",
-            "concatenation",
-
-            "quoted_string",
-            "numeric",
-
-            "function_argument",
-
-            "transaction_control_statements",
-            "commit_statement"
-    );
 }
