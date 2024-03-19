@@ -4,30 +4,64 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.grammars.plsql.PlSqlLexer;
 import org.antlr.grammars.plsql.PlSqlParser;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.text.StringEscapeUtils;
 import org.joox.Match;
 import org.xml.sax.SAXException;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static org.joox.JOOX.$;
 
 @Slf4j
 public class Parser {
 
+    private static final Pattern dollarLine = Pattern.compile("^\\s*\\$.*");
+    private static final Pattern javaSource = Pattern.compile("^CREATE OR REPLACE AND RESOLVE JAVA.*");
+
     public Match parse(InputStream inputStream) throws IOException, SAXException {
 
-        var lexer = new PlSqlLexer(CharStreams.fromStream(inputStream));
+        // Preprocess to ignore conditional compilation macros ($IF, ...)
+        // Also aborts when Java source is encountered
+        var scanner = new Scanner(new BOMInputStream(inputStream));
+        StringBuilder sb = new StringBuilder();
+        while (scanner.hasNextLine()) {
+            var line = scanner.nextLine();
+            if(!dollarLine.matcher(line).matches()) {
+                sb.append(line);
+            }
+            sb.append("\n");
+            if(javaSource.matcher(line).matches()) {
+                throw new ParseException(true);
+            }
+        }
+
+        var lexer = new PlSqlLexer(CharStreams.fromString(sb.toString()));
+        List<String> errors = new ArrayList<>();
+        lexer.addErrorListener(new BaseErrorListener() {
+            @Override
+            public void syntaxError(Recognizer<?, ?> recognizer, Object o, int i, int i1, String s, RecognitionException e) {
+                errors.add(s);
+            }
+        });
         var tokenStream = new CommonTokenStream(lexer);
         var parser = new PlSqlParser(tokenStream);
+        parser.addErrorListener(new BaseErrorListener() {
+            @Override
+            public void syntaxError(Recognizer<?, ?> recognizer, Object o, int i, int i1, String s, RecognitionException e) {
+                errors.add(s);
+            }
+        });
         var parseTree = parser.sql_script();
         var walker = new ParseTreeWalker();
 
@@ -51,8 +85,9 @@ public class Parser {
 
             @Override
             public void visitErrorNode(ErrorNode errorNode) {
-                throw new RuntimeException(errorNode.toString());
+                errors.add(errorNode.toString());
             }
+
 
             @SneakyThrows
             @Override
@@ -95,7 +130,11 @@ public class Parser {
         walker.walk(listener, parseTree);
         writer.flush();
 
-        return $(new ByteArrayInputStream(out.toByteArray()));
+        if(errors.isEmpty()) {
+            return $(new ByteArrayInputStream(out.toByteArray()));
+        } else {
+            throw new ParseException();
+        }
     }
 
     private static String name(PlSqlParser parser, ParserRuleContext parserRuleContext) {

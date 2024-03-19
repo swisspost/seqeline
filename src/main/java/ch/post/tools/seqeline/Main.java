@@ -1,6 +1,7 @@
 package ch.post.tools.seqeline;
 
 import ch.post.tools.seqeline.catalog.Schema;
+import ch.post.tools.seqeline.parser.ParseException;
 import ch.post.tools.seqeline.parser.Parser;
 import ch.post.tools.seqeline.process.TreeProcessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.stream.Stream;
 
@@ -55,11 +57,17 @@ public class Main implements Callable<Integer> {
     @Option(names = {"-p", "--publish"}, description = "Publish to localhost Graph DB")
     private boolean publish;
 
+    @Option(names = {"-i", "--ignore-errors"}, description = "Continue on errors")
+    private boolean continueOnError;
+
     private static final String extension = "\\.[^\\.]+$";
 
     @Override
     public Integer call() throws Exception {
         Schema schema = new Schema("data/model/metadata.json");
+        cacheDir = new File(cacheDir, application);
+        outputDir = new File(outputDir, application);
+
         cacheDir.mkdirs();
         outputDir.mkdirs();
 
@@ -78,44 +86,65 @@ public class Main implements Callable<Integer> {
             }
         }).toList();
 
-
-        for (var sourceFile : files) {
-            var treeFile = new File(cacheDir, sourceFile.getName().replaceAll(extension, ".xml"));
-            var tree = makeTree(sourceFile, treeFile);
-            var graphFile = new File(outputDir, sourceFile.getName().replaceAll(extension, ".trig"));
-            if(force || shouldGenerate(treeFile, graphFile) && !treeOnly) {
-                log.info("Generating graph ...");
-                String graphName;
-                try (var out = new FileOutputStream(graphFile)) {
-                    graphName = new TreeProcessor(domain, application, sourceFile.getName().replaceAll(extension,""), tree, schema).process(out);
+        try {
+            for (var sourceFile : files) {
+                var treeFile = new File(cacheDir, sourceFile.getName().replaceAll(extension, ".xml"));
+                var tree = makeTree(sourceFile, treeFile);
+                var graphFile = new File(outputDir, sourceFile.getName().replaceAll(extension, ".trig"));
+                if(tree.isPresent()) {
+                    if (force || shouldGenerate(treeFile, graphFile) && !treeOnly) {
+                        log.info("Generating graph ...");
+                        String graphName;
+                        try (var out = new FileOutputStream(graphFile)) {
+                            graphName = new TreeProcessor(domain, application, sourceFile.getName().replaceAll(extension, ""), tree.get(), schema).process(out);
+                        }
+                        if (publish) {
+                            publishToGraphDb(graphName, graphFile);
+                        }
+                    } else {
+                        log.info("Graph already up-to-date.");
+                    }
+                } else {
+                    log.info("Skipped.");
                 }
-                if(publish) {
-                    publishToGraphDb(graphName, graphFile);
-                }
-            } else {
-                log.info("Graph already up-to-date.");
             }
+            log.info("done.");
+            return 0;
+        } catch (ParseException e) {
+            log.error("Finished with errors.");
+            return 1;
         }
-        log.info("done.");
-        return 0;
     }
 
     @SneakyThrows
-    private Match makeTree(File source, File target) {
+    private Optional<Match> makeTree(File source, File target) {
         Match result;
-        log.info("Processing "+source+" ...");
-        if(force || shouldGenerate(source, target)) {
-            try(var out = new FileOutputStream(target)) {
-                try(var in = new FileInputStream(source)) {
-                    result = new Parser().parse(in);
+        log.info("Processing " + source + " ...");
+        try {
+            if (force || shouldGenerate(source, target)) {
+                try (var out = new FileOutputStream(target)) {
+                    try (var in = new FileInputStream(source)) {
+                        result = new Parser().parse(in);
+                    }
+                    result.write(out);
                 }
-                result.write(out);
+            } else {
+                log.info("Using cached tree.");
+                result = $(target);
             }
-        } else {
-            log.info("Using cached tree.");
-            result = $(target);
+            return Optional.of(result);
+        } catch (ParseException e) {
+            if(target.delete()) {
+                log.info("Deleted " + target);
+            } else {
+                log.error("Deleted " + target);
+            }
+
+            if (!e.isSkipped() && !continueOnError) {
+                throw e;
+            }
         }
-        return result;
+        return Optional.empty();
     }
 
     private boolean shouldGenerate(File source, File target) {
