@@ -26,7 +26,7 @@ import static org.joox.JOOX.$;
 @Slf4j
 public class Parser {
 
-    private static final Pattern dollarLine = Pattern.compile("^\\s*\\$.*");
+    private static final Pattern dollarLine = Pattern.compile("^.*\\$(IF|THEN|ELSE|END).*");
     private static final Pattern javaSource = Pattern.compile("^CREATE OR REPLACE AND RESOLVE JAVA.*");
 
     public Match parse(InputStream inputStream) throws IOException, SAXException {
