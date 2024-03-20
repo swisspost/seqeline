@@ -56,6 +56,15 @@ public class Parser {
         });
         var tokenStream = new CommonTokenStream(lexer);
         var parser = new PlSqlParser(tokenStream);
+
+        var memRatio = (double)Runtime.getRuntime().freeMemory() / (double)Runtime.getRuntime().totalMemory();
+        if(memRatio < 0.2) {
+            log.info("Clearing cache ...");
+            lexer.getInterpreter().clearDFA();
+            parser.getInterpreter().clearDFA();
+            Runtime.getRuntime().gc();
+        }
+
         parser.addErrorListener(new BaseErrorListener() {
             @Override
             public void syntaxError(Recognizer<?, ?> recognizer, Object o, int i, int i1, String s, RecognitionException e) {
