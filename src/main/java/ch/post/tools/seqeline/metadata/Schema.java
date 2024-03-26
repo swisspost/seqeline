@@ -9,6 +9,8 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -17,51 +19,61 @@ public class Schema {
 
     private Map<String, Relation> relations = new HashMap<>();
 
+    public Schema() {
+    }
+
+    @SneakyThrows
+    public void populate(InputStream input) {
+        JsonFactory factory = new JsonFactory();
+        try (JsonParser parser = factory.createParser(input)) {
+            while (parser.nextToken() != JsonToken.END_OBJECT) {
+                if ("relations".equals(parser.getCurrentName())) {
+                    while (parser.nextToken() != JsonToken.END_ARRAY) {
+                        String tableName = null;
+                        String tableComment = null;
+                        List<Column> columns = new ArrayList<>();
+                        while (parser.nextToken() != JsonToken.END_OBJECT) {
+                            if ("columns".equals(parser.getCurrentName())) {
+                                while (parser.nextToken() != JsonToken.END_ARRAY) {
+                                    String name = null;
+                                    String comment = null;
+                                    while (parser.nextToken() != JsonToken.END_OBJECT) {
+                                        if ("name".equals(parser.getCurrentName())) {
+                                            name = parser.nextTextValue().toLowerCase();
+                                        }
+                                        if ("comment".equals(parser.getCurrentName())) {
+                                            comment = parser.nextTextValue().toLowerCase();
+                                        }
+                                    }
+                                    columns.add(new Column(name, comment));
+                                }
+                            }
+                            if ("name".equals(parser.getCurrentName())) {
+                                tableName = parser.nextTextValue().toLowerCase();
+                            }
+                            if ("comment".equals(parser.getCurrentName())) {
+                                tableComment = parser.nextTextValue().toLowerCase();
+                            }
+                        }
+                        Objects.requireNonNull(tableName);
+                        Relation table = Relation.of(tableName, RelationType.TABLE, tableComment);
+                        columns.forEach(column -> {
+                            var binding = new Binding(column.name, BindingType.COLUMN);
+                            binding.setComment(column.comment);
+                            table.getBinding().addChild(binding);
+                        });
+                        relations.put(tableName, table);
+                    }
+                }
+            }
+        }
+    }
+
     @SneakyThrows
     public Schema(File schemaFile) {
         if(schemaFile.exists()) {
-            JsonFactory factory = new JsonFactory();
-            try (JsonParser parser = factory.createParser(schemaFile)) {
-                while (parser.nextToken() != JsonToken.END_OBJECT) {
-                    if ("relations".equals(parser.getCurrentName())) {
-                        while (parser.nextToken() != JsonToken.END_ARRAY) {
-                            String tableName = null;
-                            String tableComment = null;
-                            List<Column> columns = new ArrayList<>();
-                            while (parser.nextToken() != JsonToken.END_OBJECT) {
-                                if ("columns".equals(parser.getCurrentName())) {
-                                    while (parser.nextToken() != JsonToken.END_ARRAY) {
-                                        String name = null;
-                                        String comment = null;
-                                        while (parser.nextToken() != JsonToken.END_OBJECT) {
-                                            if ("name".equals(parser.getCurrentName())) {
-                                                name = parser.nextTextValue().toLowerCase();
-                                            }
-                                            if ("comment".equals(parser.getCurrentName())) {
-                                                comment = parser.nextTextValue().toLowerCase();
-                                            }
-                                        }
-                                        columns.add(new Column(name, comment));
-                                    }
-                                }
-                                if ("name".equals(parser.getCurrentName())) {
-                                    tableName = parser.nextTextValue().toLowerCase();
-                                }
-                                if ("comment".equals(parser.getCurrentName())) {
-                                    tableComment = parser.nextTextValue().toLowerCase();
-                                }
-                            }
-                            Objects.requireNonNull(tableName);
-                            Relation table = Relation.of(tableName, RelationType.TABLE, tableComment);
-                            columns.forEach(column -> {
-                                var binding = new Binding(column.name, BindingType.COLUMN);
-                                binding.setComment(column.comment);
-                                table.getBinding().addChild(binding);
-                            });
-                            relations.put(tableName, table);
-                        }
-                    }
-                }
+            try(var in = new FileInputStream(schemaFile)) {
+                populate(in);
             }
         } else {
             log.warn("No metadata for the current schema. Columns will not be detected. Consider running 'seqeline -b'.");

@@ -61,22 +61,7 @@ public class TreeProcessor {
     @SneakyThrows
     public String process(OutputStream out) {
 
-        Stack stack = new Stack();
-        new NodeProcessor(stack, schema).process(root);
-
-        Map<Binding, IRI> createdNodes = new HashMap<>();
-
-        stack.root().getBindings().stream().forEach(primary -> {
-                    var primaryName = primary.getName();
-                    primary.setGlobalName(primaryName);
-                    primary.children().forEach(secondary ->
-                        secondary.setGlobalName(primaryName + "." + secondary.getName()));
-                });
-
-        stack.root().getBindings().stream().forEach(binding ->
-                createNode(modelBuilder, binding, createdNodes));
-
-        Model model = modelBuilder.build();
+        var model = createModel();
 
         RDFWriter writer = Rio.createWriter(RDFFormat.TRIG, out);
         writer.startRDF();
@@ -88,6 +73,24 @@ public class TreeProcessor {
         return graphName;
     }
 
+    public Model createModel() {
+        Stack stack = new Stack();
+        new NodeProcessor(stack, schema).process(root);
+
+        Map<Binding, IRI> createdNodes = new HashMap<>();
+
+        stack.root().getBindings().stream().forEach(primary -> {
+            var primaryName = primary.getName();
+            primary.setGlobalName(primaryName);
+            primary.children().forEach(secondary ->
+                    secondary.setGlobalName(primaryName + "." + secondary.getName()));
+        });
+
+        stack.root().getBindings().stream().forEach(binding ->
+                createNode(modelBuilder, binding, createdNodes));
+
+        return modelBuilder.build();
+    }
 
     private IRI createNode(ModelBuilder modelBuilder, Binding binding, Map<Binding, IRI> createdNodes) {
         var existing = createdNodes.get(binding);
