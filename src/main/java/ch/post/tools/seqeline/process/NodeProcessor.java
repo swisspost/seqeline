@@ -26,62 +26,61 @@ public class NodeProcessor {
         }
 
         switch (node.tag()) {
-            case "PackageSpecification" -> skip();
+            case "create_package" -> skip();
 
-            case "PackageBody" -> {
-                var name = name(node.child("ObjectNameDeclaration").children().last());
-                var pack = new Binding(name, BindingType.PACKAGE);
+            case "create_package_body" -> {
+                var pack = binding(identifier(node), BindingType.PACKAGE);
                 context().declare(pack);
                 stack.execute(new LexicalScope(pack), processChildren(node));
             }
 
-            case "VariableOrConstantDeclarator" -> {
-                var variable = binding(node.child(0), BindingType.VARIABLE);
+            case "variable_declaration" -> {
+                var variable = binding(identifier(node), BindingType.VARIABLE);
                 context().declare(variable);
                 stack.execute(new Assignment(variable), processSiblings(node.child(0)));
             }
-            case "ProgramUnit" -> {
-                var routine = new Binding(node.attr("MethodName").toLowerCase(), BindingType.ROUTINE);
+
+            case "procedure_body", "function_body" -> {
+                var routine = binding(identifier(node), BindingType.ROUTINE);
                 context().declare(routine);
-                stack.execute(new LexicalScope(routine), processChildren(node));
-            }
 
-
-            case "FormalParameters" -> {
-                var i = new AtomicInteger(0);
-                node.children("FormalParameter").each().stream()
-                        .map(param -> binding(param, BindingType.PARAMETER).position(i.getAndIncrement()))
-                        .forEach(param -> context().declare(param));
-            }
-
-            case "FunctionCall" -> stack.execute(new RoutineCall(), processChildren(node));
-
-            case "FunctionName" -> {
-                var qualifiedName = QualifiedName.builder().type(BindingType.ROUTINE);
-                if(node.children().each().size() == 2) {
-                    qualifiedName.prefix(name(node.child(0))).name(name(node.child(1)));
-                } else {
-                    qualifiedName.name(name(node.child(0)));
-                }
-                context().returnBinding(context().resolve(qualifiedName.build()).orElseThrow());
-            }
-
-            case "ArgumentList" -> {
-                AtomicInteger position = new AtomicInteger(0);
-                node.children().each().forEach(argument -> {
-                    if(argument.child("UnqualifiedID").isEmpty()) {
-                        stack.execute(new Wrapper(new Binding("["+position+"]", BindingType.ARGUMENT).position(position.getAndIncrement())), processChildren(argument));
-                    } else {
-                        stack.execute(new Wrapper(binding(argument.child("UnqualifiedID"), BindingType.ARGUMENT)), processChildren(argument));
-                    }
+                stack.execute(new LexicalScope(routine), () -> {
+                    var i = new AtomicInteger(0);
+                    node.children("parameter").children("parameter_name").each().stream()
+                            .map(param -> binding(identifier(param), BindingType.PARAMETER)
+                                    .position(i.getAndIncrement()))
+                            .forEach(param -> context().declare(param));
+                    processChildren(node).run();
                 });
             }
+
+            case "call_statement" -> stack.execute(new RoutineCall(), () -> {
+                // Name
+                var qualifiedName = QualifiedName.builder().type(BindingType.ROUTINE);
+                var names = node.find("routine_name").find("id_expression");
+                if(names.each().size() == 2) {
+                    qualifiedName.prefix(text(names.first())).name(text(names.last()));
+                } else {
+                    qualifiedName.name(text(names.first()));
+                }
+                context().returnBinding(context().resolve(qualifiedName.build()).orElseThrow());
+
+                // Arguments
+                AtomicInteger position = new AtomicInteger(0);
+                node.children().each().forEach(argument -> {
+                    if(argument.child("identifier").isEmpty()) {
+                        stack.execute(new Wrapper(new Binding("["+position+"]", BindingType.ARGUMENT).position(position.getAndIncrement())), processChildren(argument));
+                    } else {
+                        stack.execute(new Wrapper(binding(identifier(argument), BindingType.ARGUMENT)), processChildren(argument));
+                    }
+                });
+            });
 
             case "ReturnStatement" ->
                 stack.execute(new Wrapper(new Binding("[return]", BindingType.RETURN)), processChildren(node));
 
             case "CursorUnit" -> {
-                var cursor = new Binding(name(node.child("ID")), BindingType.CURSOR);
+                var cursor = new Binding(text(node.child("ID")), BindingType.CURSOR);
                 context().declare(cursor);
                 stack.execute(new LexicalScope(cursor), () -> {
                     process(node.child("FormalParameters"));
@@ -144,7 +143,7 @@ public class NodeProcessor {
                         }));
 
             case "SingleTableInsert" -> {
-                var tableName = name(node.child("InsertIntoClause").find("TableName"));
+                var tableName = text(node.child("InsertIntoClause").find("TableName"));
                 var table = stack.root().declare(schema.resolve(tableName).orElse(new Binding(tableName, BindingType.RELATION)));
                 Stream<Binding> targets = node.child("InsertIntoClause").find("Column").each().stream()
                         .map(column -> binding(column, BindingType.COLUMN))
@@ -156,7 +155,7 @@ public class NodeProcessor {
             }
 
             case "TableName" -> {
-                var struct = schema.resolve(name(node))
+                var struct = schema.resolve(text(node))
                         .map(relation -> stack.root().declare(relation))
                         .orElse(resolveNew(node, BindingType.STRUCTURE));
                 if (!node.parent("TableReference").isEmpty()) {
@@ -167,7 +166,7 @@ public class NodeProcessor {
             case "Column" -> {
                 var column = resolveNew(node, BindingType.FIELD);
                 context().returnBinding(column);
-                node.prev("TableName").each().forEach(relation -> context().resolve(QualifiedName.of(name(relation))).ifPresent(r -> r.addChild(column)));
+                node.prev("TableName").each().forEach(relation -> context().resolve(QualifiedName.of(text(relation))).ifPresent(r -> r.addChild(column)));
             }
 
             case "PrimaryExpression" ->
@@ -199,27 +198,31 @@ public class NodeProcessor {
     private List<Binding> intoVariables(Match node) {
         var vars = node.child("IntoClause").children("VariableName").each();
         return vars.stream()
-                .map(this::name)
+                .map(this::text)
                 .map(QualifiedName::of)
                 .map(t -> context().resolve(t).orElseThrow())
                 .toList();
     }
 
     private Binding resolveNew(Match node, BindingType type) {
-        return context().resolve(QualifiedName.of(null, name(node), true)).or(() ->
+        return context().resolve(QualifiedName.of(null, text(node), true)).or(() ->
                 Optional.of(context().declare(binding(node, type)))).orElseThrow();
     }
 
     private Binding resolveExisting(Match node) {
-        return context().resolve(QualifiedName.of(null, name(node), true)).orElseThrow();
+        return context().resolve(QualifiedName.of(null, text(node), true)).orElseThrow();
     }
 
     private Binding binding(Match node, BindingType type) {
-        return new Binding(name(node), type);
+        return new Binding(text(node), type);
     }
 
-    private String name(Match node) {
-        return node.attr("CanonicalImage").toLowerCase();
+    private String text(Match node) {
+        return node.text().trim().toLowerCase();
+    }
+
+    private Match identifier(Match node) {
+        return node.find("identifier").first().find("id_expression").last();
     }
 
     private Runnable processChildren(Match node) {

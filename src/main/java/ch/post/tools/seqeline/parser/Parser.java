@@ -86,7 +86,7 @@ public class Parser {
             @SneakyThrows
             @Override
             public void visitTerminal(TerminalNode terminalNode) {
-                if (showTerminal) {
+                if (showTerminal && ignoreDepth == 0) {
                     writer.write(indent + StringEscapeUtils.escapeXml11(terminalNode.toString()));
                     writer.newLine();
                 }

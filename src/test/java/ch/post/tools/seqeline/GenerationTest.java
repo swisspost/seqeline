@@ -4,36 +4,59 @@ import ch.post.tools.seqeline.metadata.Schema;
 import ch.post.tools.seqeline.parser.Parser;
 import ch.post.tools.seqeline.process.TreeProcessor;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFWriter;
+import org.eclipse.rdf4j.rio.Rio;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.eclipse.rdf4j.model.util.Values.iri;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Slf4j
 class GenerationTest {
 
-    @Test
-    public void testPackageBody() {
-        var model = execute("""              
-                CREATE OR REPLACE PACKAGE BODY test_pack IS
-                    PROCEDURE test_proc (test_param IN NUMBER DEFAULT NULL) IS
-                    BEGIN
-                        test_pack2.test_proc2(test_param);
-                    END;
-                END;
-                """);
-        //model.stream().forEach(System.out::println);
-        assertTrue(model.contains(iri(line_data, "test_pack"), RDF.TYPE, iri(line, "Package")));
+    private static final String sourceDir = "src/test/resources/generation";
+
+    @SneakyThrows
+    @ParameterizedTest
+    @MethodSource
+    public void testGeneration(String sourceFile) {
+        var source = Files.readString(Path.of(sourceDir, sourceFile));
+        var actual = execute(source).trim();
+        var expected = Files.readString(Path.of(sourceDir, sourceFile.replaceAll("\\.sql$", ".ttl"))).trim();
+        assertEquals(expected, actual);
+    }
+
+    public static Stream<String> testGeneration() {
+        return Arrays.stream(new File(sourceDir).listFiles())
+                .map(File::getName)
+                .filter(name -> name.endsWith(".sql"));
     }
 
     private static Schema schema = new Schema();
     private Parser parser = new Parser();
-    private String line ="https://schema.domain/lineage/";
-    private String line_data ="https://data.domain/app/lineage/";
+    private String line ="https://schema/lineage/";
+    private String line_data ="https://data/lineage/";
 
     @BeforeAll
     public static void init() {
@@ -41,10 +64,31 @@ class GenerationTest {
     }
 
     @SneakyThrows
-    private Model execute(String source) {
+    private String execute(String source) {
         var root = parser.parse(new ByteArrayInputStream(source.getBytes()));
-        var treeProcessor = new TreeProcessor("domain", "app", "file", root, schema);
-        return treeProcessor.createModel();
+        var treeProcessor = new TreeProcessor("", "", "", root, schema);
+        var model = treeProcessor.createModel();
+        var out = new ByteArrayOutputStream();
+        RDFWriter writer = Rio.createWriter(RDFFormat.TURTLE, out);
+        writer.startRDF();
+        model.getNamespaces().forEach(ns -> writer.handleNamespace(ns.getPrefix(), ns.getName()));
+        for (var statement : model) {
+            writer.handleStatement(statement);
+        }
+        writer.endRDF();
+
+        var rdfText = new String(out.toByteArray()).replaceAll("\\^\\^[^ ]*", "");
+        if(interactiveDev()) {
+            System.out.println("https://www.ldf.fi/service/rdf-grapher?rdf="+ URLEncoder.encode(rdfText, StandardCharsets.UTF_8.toString()));
+            System.out.println();
+            System.out.println(rdfText);
+        }
+        return rdfText;
+    }
+
+    private boolean interactiveDev() {
+        // Test if we are in IntelliJ.
+        return Optional.ofNullable(System.getProperties().get("java.class.path")).map(Objects::toString).map(p -> p.contains("idea_rt.jar")).orElse(false);
     }
 
     private static String schema() {
