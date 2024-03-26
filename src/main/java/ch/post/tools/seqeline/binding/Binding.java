@@ -24,12 +24,19 @@ public class Binding {
     @Getter
     private final BindingType type;
 
+    @Setter
+    private List<String> additionalTypes;
+
     @Getter
     @Setter
     private String globalName;
 
     @Getter
     private Integer position = null;
+
+    @Getter
+    @Setter
+    private String comment;
 
     private final Map<String, Binding> children = new HashMap<>();
 
@@ -66,6 +73,13 @@ public class Binding {
         references.add(binding);
     }
 
+    public void addType(String type) {
+        if(additionalTypes == null) {
+            additionalTypes = new ArrayList<>();
+        }
+        additionalTypes.add(type);
+    }
+
     public Stream<Binding> children() {
         return children.values().stream();
     }
@@ -80,6 +94,10 @@ public class Binding {
 
     public Stream<Binding> references() {
         return references.stream();
+    }
+
+    public Stream<String> additionalTypes() {
+        return Optional.ofNullable(additionalTypes).map(Collection::stream).orElse(Stream.empty());
     }
 
     public Binding position(int position) {

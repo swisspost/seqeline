@@ -111,11 +111,18 @@ public class Main implements Callable<Integer> {
                         out
                 );
             }
+        }
+
+        Schema schema = new Schema(schemaFile);
+
+        if(args.database !=null) {
+            var relationCount = schema.relations().count();
+            var columnCount = schema.relations().flatMap(r -> r.getBinding().children()).count();
+            log.info("Fetched "+columnCount+" columns from "+relationCount+" relations.");
 
             return 0;
         }
 
-        Schema schema = new Schema("data/model/metadata.json");
         var treeDir = new File(new File(cacheDir, "tree"), application);
         outputDir = new File(outputDir, application);
 

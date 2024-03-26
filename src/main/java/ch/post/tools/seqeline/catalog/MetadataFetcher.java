@@ -64,6 +64,5 @@ public class MetadataFetcher {
                 }
             }
         }
-        log.info("done.");
     }
 }
