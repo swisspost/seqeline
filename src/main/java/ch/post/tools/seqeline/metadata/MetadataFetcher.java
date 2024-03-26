@@ -1,4 +1,4 @@
-package ch.post.tools.seqeline.catalog;
+package ch.post.tools.seqeline.metadata;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;

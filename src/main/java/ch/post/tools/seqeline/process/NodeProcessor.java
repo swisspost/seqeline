@@ -2,7 +2,7 @@ package ch.post.tools.seqeline.process;
 
 import ch.post.tools.seqeline.binding.Binding;
 import ch.post.tools.seqeline.binding.BindingType;
-import ch.post.tools.seqeline.catalog.Schema;
+import ch.post.tools.seqeline.metadata.Schema;
 import ch.post.tools.seqeline.stack.*;
 import com.google.common.collect.Streams;
 import lombok.RequiredArgsConstructor;

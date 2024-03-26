@@ -1,4 +1,4 @@
-package ch.post.tools.seqeline.catalog;
+package ch.post.tools.seqeline.metadata;
 
 import ch.post.tools.seqeline.binding.Binding;
 import ch.post.tools.seqeline.binding.BindingType;

@@ -1,10 +1,8 @@
 package ch.post.tools.seqeline.process;
 
 import ch.post.tools.seqeline.binding.Binding;
-import ch.post.tools.seqeline.catalog.Schema;
+import ch.post.tools.seqeline.metadata.Schema;
 import ch.post.tools.seqeline.stack.Stack;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.TextNode;
 import lombok.SneakyThrows;
 import lombok.extern.java.Log;
 import org.eclipse.rdf4j.model.IRI;
@@ -18,8 +16,6 @@ import org.eclipse.rdf4j.rio.Rio;
 import org.joox.Match;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;

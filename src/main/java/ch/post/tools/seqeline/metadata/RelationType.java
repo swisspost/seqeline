@@ -1,4 +1,4 @@
-package ch.post.tools.seqeline.catalog;
+package ch.post.tools.seqeline.metadata;
 
 public enum RelationType {
     TABLE,

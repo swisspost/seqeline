@@ -1,13 +1,11 @@
 package ch.post.tools.seqeline;
 
-import ch.post.tools.seqeline.catalog.MetadataFetcher;
-import ch.post.tools.seqeline.catalog.Schema;
+import ch.post.tools.seqeline.metadata.MetadataFetcher;
+import ch.post.tools.seqeline.metadata.Schema;
 import ch.post.tools.seqeline.graphdb.GraphDbPublisher;
 import ch.post.tools.seqeline.parser.ParseException;
 import ch.post.tools.seqeline.parser.Parser;
 import ch.post.tools.seqeline.process.TreeProcessor;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.TextNode;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.joox.Match;
@@ -19,8 +17,6 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;

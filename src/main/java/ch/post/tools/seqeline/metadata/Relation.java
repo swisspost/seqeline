@@ -1,11 +1,8 @@
-package ch.post.tools.seqeline.catalog;
+package ch.post.tools.seqeline.metadata;
 
 import ch.post.tools.seqeline.binding.Binding;
 import ch.post.tools.seqeline.binding.BindingType;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-
-import javax.crypto.spec.OAEPParameterSpec;
 
 @Getter
 public class Relation {
