@@ -1,5 +1,6 @@
 package ch.post.tools.seqeline;
 
+import ch.post.tools.seqeline.catalog.MetadataFetcher;
 import ch.post.tools.seqeline.catalog.Schema;
 import ch.post.tools.seqeline.parser.ParseException;
 import ch.post.tools.seqeline.parser.Parser;
@@ -11,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.joox.Match;
 import org.xml.sax.SAXException;
 import picocli.CommandLine;
+import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -33,45 +35,94 @@ import static org.joox.JOOX.$;
 @Slf4j
 public class Main implements Callable<Integer> {
 
-    @Parameters(description = "Source files or directories", arity = "1..*")
-    private List<File> paths;
+    static class GenerationArgs {
+        @Parameters(description = "Source files or directories", arity = "1..*")
+        private List<File> paths;
+    }
 
-    @Option(names = {"-d", "--domain"}, description = "Cache directory for parse trees", defaultValue = "")
-    private String domain;
+    static class DatabaseArgs {
+        @Option(names = {"-m", "--metadata-db"}, required = true, description = "JDBC URL to fetch metadata (if present, seqeline only fetches the metadata)")
+        private String dbUrl;
 
-    @Option(names = {"-a", "--application"}, description = "Application name", defaultValue = "app")
-    private String application;
+        @Option(names = {"-u", "--username"}, required = true, description = "Database user")
+        private String username;
 
-    @Option(names = {"-c", "--cache-dir"}, description = "Cache directory for parse trees", defaultValue = "target/sequeline/tree")
-    private File cacheDir;
+        @Option(names = {"-p", "--password"}, required = true, description = "Database password or @<file> containing password.")
+        private String password;
+    }
 
-    @Option(names = {"-o", "--output-dir"}, description = "Output directory for graphs", defaultValue = "target/sequeline/graph")
+    static class Args {
+        @ArgGroup(exclusive = false, heading = "File system Sources %n")
+        GenerationArgs generation;
+
+        @ArgGroup(exclusive = false, heading = "Fetch metadata from database %n")
+        DatabaseArgs database;
+    }
+
+    @ArgGroup(exclusive = true, multiplicity = "1")
+    Args args;
+
+    @Option(names = {"-o", "--output-dir"}, description = "Output directory for graphs", defaultValue = "target/seqeline/graph")
     private File outputDir;
 
-    @Option(names = {"-t", "--tree-only"}, description = "Only generate tree")
+    @Option(names = {"--tree-only"}, description = "Only generate tree")
     private boolean treeOnly;
 
     @Option(names = {"-f", "--force"}, description = "Ignore cached files and force generation")
     private boolean force;
 
-    @Option(names = {"-p", "--publish"}, description = "Publish to localhost Graph DB")
+    @Option(names = {"--publish"}, description = "Publish to localhost GraphDB")
     private boolean publish;
 
     @Option(names = {"-i", "--ignore-errors"}, description = "Continue on errors")
     private boolean continueOnError;
 
+    @Option(names = {"-d", "--domain"}, description = "Domain name to use in RDF URLs", defaultValue = "")
+    private String domain;
+
+    @Option(names = {"-a", "--application"}, description = "Application name", defaultValue = "")
+    private String application;
+
+    @Option(names = {"-c", "--cache-dir"}, description = "Cache directory", defaultValue = "target/seqeline")
+    private File cacheDir;
+
     private static final String extension = "\\.[^\\.]+$";
 
     @Override
     public Integer call() throws Exception {
+        cacheDir.mkdirs();
+        var metadataDir = new File(new File(cacheDir, "metadata"), application);
+        var schemaFile = new File(metadataDir, "schema.json");
+
+        if (args.database != null) {
+            // Fetch metadata
+            metadataDir.mkdirs();
+            String password;
+            if (args.database.password.startsWith("@")) {
+                password = Files.readString(Path.of(args.database.password.substring(1)));
+            } else {
+                password = args.database.password;
+            }
+            var fetcher = new MetadataFetcher(args.database.dbUrl, args.database.username, password);
+
+            try (var out = new FileOutputStream(schemaFile)) {
+                fetcher.fetchMetadata(
+                        getClass().getClassLoader().getResourceAsStream("metadata.sql"),
+                        out
+                );
+            }
+
+            return 0;
+        }
+
         Schema schema = new Schema("data/model/metadata.json");
-        cacheDir = new File(cacheDir, application);
+        var treeDir = new File(new File(cacheDir, "tree"), application);
         outputDir = new File(outputDir, application);
 
-        cacheDir.mkdirs();
+        treeDir.mkdirs();
         outputDir.mkdirs();
 
-        var files = paths.stream().flatMap(path -> {
+        var files = args.generation.paths.stream().flatMap(path -> {
             if (path.isFile()) {
                 return Stream.of(path.getAbsoluteFile());
             } else {
@@ -88,7 +139,7 @@ public class Main implements Callable<Integer> {
 
         try {
             for (var sourceFile : files) {
-                var treeFile = new File(cacheDir, sourceFile.getName().replaceAll(extension, ".xml"));
+                var treeFile = new File(treeDir, sourceFile.getName().replaceAll(extension, ".xml"));
                 var tree = makeTree(sourceFile, treeFile);
                 var graphFile = new File(outputDir, sourceFile.getName().replaceAll(extension, ".trig"));
                 if(tree.isPresent()) {

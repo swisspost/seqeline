@@ -46,10 +46,14 @@ public class TreeProcessor {
     public TreeProcessor(String domain, String scope, String name, Match root, Schema schema) {
         this.schema = schema;
         this.root = root;
-        line = "https://schema."+domain+"/lineage/";
-        line_data = "https://data."+domain+"/" + scope + "/lineage/";
+
+        domain = !domain.isBlank() ? "." + domain : "";
+        scope = !scope.isBlank() ? "/" + scope : "";
+
+        line = "https://schema"+domain+"/lineage/";
+        line_data = "https://data"+domain + scope + "/lineage/";
         localScope = name;
-        graphName = "https://graph." + domain + "/" + scope + "/lineage/" + localScope;
+        graphName = "https://graph" + domain + scope + "/lineage/" + localScope;
         modelBuilder = new ModelBuilder()
                 .namedGraph(graphName)
                 .setNamespace("rdf", RDF.NAMESPACE)
