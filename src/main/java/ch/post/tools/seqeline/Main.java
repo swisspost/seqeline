@@ -2,6 +2,7 @@ package ch.post.tools.seqeline;
 
 import ch.post.tools.seqeline.catalog.MetadataFetcher;
 import ch.post.tools.seqeline.catalog.Schema;
+import ch.post.tools.seqeline.graphdb.GraphDbPublisher;
 import ch.post.tools.seqeline.parser.ParseException;
 import ch.post.tools.seqeline.parser.Parser;
 import ch.post.tools.seqeline.process.TreeProcessor;
@@ -41,7 +42,7 @@ public class Main implements Callable<Integer> {
     }
 
     static class DatabaseArgs {
-        @Option(names = {"-m", "--metadata-db"}, required = true, description = "JDBC URL to fetch metadata (if present, seqeline only fetches the metadata)")
+        @Option(names = {"-b", "--database"}, required = true, description = "JDBC URL to fetch metadata (if present, seqeline only fetches the metadata)")
         private String dbUrl;
 
         @Option(names = {"-u", "--username"}, required = true, description = "Database user")
@@ -68,11 +69,18 @@ public class Main implements Callable<Integer> {
     @Option(names = {"--tree-only"}, description = "Only generate tree")
     private boolean treeOnly;
 
-    @Option(names = {"-f", "--force"}, description = "Ignore cached files and force generation")
-    private boolean force;
+    @Option(names = {"-t", "--force-tree"}, description = "Ignore cached files and force tree generation")
+    private boolean forceTree;
 
-    @Option(names = {"--publish"}, description = "Publish to localhost GraphDB")
+    @Option(names = {"-g", "--force-graph"}, description = "Ignore cached files and force graph generation")
+    private boolean forceGraph;
+
+    @Option(names = {"--publish"}, description = "Publish graphs to Graph DB")
     private boolean publish;
+
+    @Option(names = {"--graphdb-url"}, description = "GraphDB repository to publish to.", defaultValue =
+            "http://localhost:7200/rest/repositories/lineage/")
+    private String graphDbRepositoryUrl;
 
     @Option(names = {"-i", "--ignore-errors"}, description = "Continue on errors")
     private boolean continueOnError;
@@ -144,20 +152,26 @@ public class Main implements Callable<Integer> {
             }
         }).toList();
 
+        GraphDbPublisher graphDbPublisher = new GraphDbPublisher(graphDbRepositoryUrl, outputDir.getAbsolutePath());
+
+        if(publish) {
+            graphDbPublisher.start();
+        }
+
         try {
             for (var sourceFile : files) {
                 var treeFile = new File(treeDir, sourceFile.getName().replaceAll(extension, ".xml"));
                 var tree = makeTree(sourceFile, treeFile);
                 var graphFile = new File(outputDir, sourceFile.getName().replaceAll(extension, ".trig"));
                 if(tree.isPresent()) {
-                    if (force || shouldGenerate(treeFile, graphFile) && !treeOnly) {
+                    if (forceGraph || shouldGenerate(treeFile, graphFile) && !treeOnly) {
                         log.info("Generating graph ...");
                         String graphName;
                         try (var out = new FileOutputStream(graphFile)) {
                             graphName = new TreeProcessor(domain, application, sourceFile.getName().replaceAll(extension, ""), tree.get(), schema).process(out);
                         }
                         if (publish) {
-                            publishToGraphDb(graphName, graphFile);
+                            graphDbPublisher.publishToGraphDb(graphName, graphFile.getName()).await();
                         }
                     } else {
                         log.info("Graph already up-to-date.");
@@ -171,6 +185,8 @@ public class Main implements Callable<Integer> {
         } catch (ParseException e) {
             log.error("Finished with errors.");
             return 1;
+        } finally {
+            graphDbPublisher.close();
         }
     }
 
@@ -179,7 +195,7 @@ public class Main implements Callable<Integer> {
         Match result;
         log.info("Processing " + source + " ...");
         try {
-            if (force || shouldGenerate(source, target)) {
+            if (forceTree || shouldGenerate(source, target)) {
                 try (var out = new FileOutputStream(target)) {
                     try (var in = new FileInputStream(source)) {
                         result = new Parser().parse(in);
@@ -207,45 +223,6 @@ public class Main implements Callable<Integer> {
 
     private boolean shouldGenerate(File source, File target) {
         return !target.exists() || source.lastModified() > target.lastModified();
-    }
-
-    @SneakyThrows
-    private void publishToGraphDb(String graphName, File graphFile) {
-        URL url = new URL("http://localhost:7200/rest/repositories/lineage/import/upload/url");
-        String sourceUrl = "http://localhost:8000/"+graphFile;
-        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-        con.setRequestMethod("POST");
-        con.setRequestProperty("Content-Type", "application/json");
-        con.setDoOutput(true);
-
-        var mapper = new ObjectMapper();
-        var request = mapper.createObjectNode();
-        var graphs = mapper.createArrayNode();
-        var fileNames = mapper.createArrayNode();
-        fileNames.add(graphFile.getAbsolutePath());
-        request.set("data", new TextNode(sourceUrl));
-        request.set("name", new TextNode(sourceUrl));
-        graphs.add(graphName);
-        request.set("replaceGraphs", graphs);
-
-        try (OutputStream os = con.getOutputStream()) {
-            mapper.writeValue(os, request);
-        }
-
-        if (con.getResponseCode() != 200) {
-            InputStream err = con.getErrorStream();
-            if (err != null) {
-                try (BufferedReader br = new BufferedReader(
-                        new InputStreamReader(err, "utf-8"))) {
-                    StringBuilder response = new StringBuilder();
-                    String responseLine = null;
-                    while ((responseLine = br.readLine()) != null) {
-                        response.append(responseLine.trim());
-                    }
-                    log.info(response.toString());
-                }
-            }
-        }
     }
 
     public static void main(String... args) throws IOException, SAXException {

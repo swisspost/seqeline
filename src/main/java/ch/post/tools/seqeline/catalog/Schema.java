@@ -64,7 +64,7 @@ public class Schema {
                 }
             }
         } else {
-            log.warn("No metadata for the current schema. Columns will not be detected. Consider running seqeline -b.");
+            log.warn("No metadata for the current schema. Columns will not be detected. Consider running 'seqeline -b'.");
             Thread.sleep(1000);
         }
     }
