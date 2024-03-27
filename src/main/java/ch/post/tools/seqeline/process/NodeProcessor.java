@@ -31,7 +31,7 @@ public class NodeProcessor {
             case "create_package_body" -> {
                 var pack = binding(identifier(node), BindingType.PACKAGE);
                 context().declare(pack);
-                stack.execute(new LexicalScope(pack), processChildren(node));
+                stack.execute(new LexicalScope(pack), processSiblings(node.child("package_name")));
             }
 
             case "variable_declaration" -> {
@@ -50,7 +50,7 @@ public class NodeProcessor {
                             .map(param -> binding(identifier(param), BindingType.PARAMETER)
                                     .position(i.getAndIncrement()))
                             .forEach(param -> context().declare(param));
-                    processChildren(node).run();
+                    processChildren(node.child("body")).run();
                 });
             }
 
@@ -67,7 +67,7 @@ public class NodeProcessor {
 
                 // Arguments
                 AtomicInteger position = new AtomicInteger(0);
-                node.children().each().forEach(argument -> {
+                node.children("argument").each().forEach(argument -> {
                     if(argument.child("identifier").isEmpty()) {
                         stack.execute(new Wrapper(new Binding("["+position+"]", BindingType.ARGUMENT).position(position.getAndIncrement())), processChildren(argument));
                     } else {
@@ -75,6 +75,14 @@ public class NodeProcessor {
                     }
                 });
             });
+
+            case "id_expression" -> {
+                if(node.next("id_expression").isEmpty()) {
+                    var id = resolveNew(node, BindingType.FIELD);
+                    context().returnBinding(id);
+                    node.prev("id_expression").each().forEach(relation -> context().resolve(QualifiedName.of(text(relation))).ifPresent(r -> r.addChild(id)));
+                }
+            }
 
             case "ReturnStatement" ->
                 stack.execute(new Wrapper(new Binding("[return]", BindingType.RETURN)), processChildren(node));
@@ -161,12 +169,6 @@ public class NodeProcessor {
                 if (!node.parent("TableReference").isEmpty()) {
                     context().returnBinding(struct);
                 }
-            }
-
-            case "Column" -> {
-                var column = resolveNew(node, BindingType.FIELD);
-                context().returnBinding(column);
-                node.prev("TableName").each().forEach(relation -> context().resolve(QualifiedName.of(text(relation))).ifPresent(r -> r.addChild(column)));
             }
 
             case "PrimaryExpression" ->

@@ -97,7 +97,8 @@ public class TreeProcessor {
         if(existing != null) {
             return existing;
         }
-        var name = Optional.ofNullable(binding.getGlobalName()).orElse(localScope+":" + binding.getId());
+        var name = Optional.ofNullable(binding.getGlobalName())
+                .orElse(localScope+":" +binding.getType().toString().toLowerCase()+":"+ binding.getId());
         var nodeIri = iri(line_data, name);
         createdNodes.put(binding, nodeIri);
 

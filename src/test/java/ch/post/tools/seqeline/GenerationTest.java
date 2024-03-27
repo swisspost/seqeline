@@ -15,9 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
+import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -55,8 +53,6 @@ class GenerationTest {
 
     private static Schema schema = new Schema();
     private Parser parser = new Parser();
-    private String line ="https://schema/lineage/";
-    private String line_data ="https://data/lineage/";
 
     @BeforeAll
     public static void init() {
@@ -66,20 +62,32 @@ class GenerationTest {
     @SneakyThrows
     private String execute(String source) {
         var root = parser.parse(new ByteArrayInputStream(source.getBytes()));
+        var tree = new StringWriter();
+        if(interactiveDev()) {
+            root.write(tree);
+        }
         var treeProcessor = new TreeProcessor("", "", "", root, schema);
         var model = treeProcessor.createModel();
         var out = new ByteArrayOutputStream();
         RDFWriter writer = Rio.createWriter(RDFFormat.TURTLE, out);
         writer.startRDF();
-        model.getNamespaces().forEach(ns -> writer.handleNamespace(ns.getPrefix(), ns.getName()));
+        model.getNamespaces().stream()
+                .filter(ns -> !ns.getPrefix().equals("rdf"))
+                .forEach(ns -> writer.handleNamespace(ns.getPrefix(), ns.getName()));
         for (var statement : model) {
-            writer.handleStatement(statement);
+            if(!statement.getPredicate().equals(RDF.TYPE)) {
+                writer.handleStatement(statement);
+            }
         }
         writer.endRDF();
 
-        var rdfText = new String(out.toByteArray()).replaceAll("\\^\\^[^ ]*", "");
+        var rdfText = new String(out.toByteArray())
+                .replaceAll("\\^\\^.*>", "")
+                .replaceAll("(?m)^[ \t]*\r?\n", "");
         if(interactiveDev()) {
-            System.out.println("https://www.ldf.fi/service/rdf-grapher?rdf="+ URLEncoder.encode(rdfText, StandardCharsets.UTF_8.toString()));
+            System.out.println("https://www.ldf.fi/service/rdf-grapher?rdf=" + URLEncoder.encode(rdfText, StandardCharsets.UTF_8.toString()));
+            System.out.println();
+            System.out.println(tree);
             System.out.println();
             System.out.println(rdfText);
         }

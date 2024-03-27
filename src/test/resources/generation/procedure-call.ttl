@@ -1,23 +1,18 @@
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix line: <https://schema/lineage/> .
 @prefix line_data: <https://data/lineage/> .
-
-line_data:test_pack a line:Package;
-  rdfs:label "test_pack";
+line_data:test_pack rdfs:label "test_pack";
   line:member line_data:test_pack.test_proc .
-
-line_data:test_pack.test_proc a line:Routine;
-  rdfs:label "test_proc";
-  line:member line_data::10 .
-
-line_data::10 a line:Parameter;
-  rdfs:label "test_param";
-  line:position "0" .
-
-line_data:test_pack2 a line:Package;
-  rdfs:label "test_pack2";
+line_data:test_pack.test_proc rdfs:label "test_proc";
+  line:member line_data::parameter:10 .
+line_data::parameter:10 rdfs:label "test_param";
+  line:position "0";
+  line:output line_data::argument:14 .
+line_data::argument:14 rdfs:label "[0]";
+  line:position "0";
+  line:output line_data::call:13 .
+line_data::call:13 rdfs:label "test_proc2";
+  line:reference line_data:test_pack2.test_proc2 .
+line_data:test_pack2.test_proc2 rdfs:label "test_proc2" .
+line_data:test_pack2 rdfs:label "test_pack2";
   line:member line_data:test_pack2.test_proc2 .
-
-line_data:test_pack2.test_proc2 a line:Routine;
-  rdfs:label "test_proc2" .
