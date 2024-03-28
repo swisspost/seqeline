@@ -1,0 +1,6 @@
+CREATE OR REPLACE PACKAGE BODY pack IS
+    FUNCTION fn(a NUMBER) RETURN NUMBER IS
+    BEGIN
+        return a;
+    END;
+END;

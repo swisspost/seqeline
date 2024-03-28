@@ -85,7 +85,7 @@ public class NodeProcessor {
                 }
             }
 
-            case "ReturnStatement" ->
+            case "return_statement" ->
                 stack.execute(new Wrapper(new Binding("[return]", BindingType.RETURN)), processChildren(node));
 
             case "CursorUnit" -> {
