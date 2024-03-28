@@ -1,6 +1,6 @@
-CREATE OR REPLACE PACKAGE BODY test_pack IS
-    PROCEDURE test_proc (test_param NUMBER) IS
+CREATE OR REPLACE PACKAGE BODY pkg IS
+    PROCEDURE pr(p NUMBER) IS
     BEGIN
-        test_pack2.test_proc2(test_param);
+        pkg2.pr2(p);
     END;
 END;
