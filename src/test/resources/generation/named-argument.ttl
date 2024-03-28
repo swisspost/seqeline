@@ -1,0 +1,17 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix line: <https://schema/lineage/> .
+@prefix line_data: <https://data/lineage/> .
+line_data:pack rdfs:label "pack";
+  line:member line_data:pack.pr .
+line_data:pack.pr rdfs:label "pr";
+  line:member line_data::parameter:3 .
+line_data::parameter:3 rdfs:label "p";
+  line:position "0";
+  line:output line_data::argument:7 .
+line_data::argument:7 rdfs:label "a";
+  line:output line_data::call:6 .
+line_data::call:6 rdfs:label "pr2";
+  line:reference line_data:pack2.pr2 .
+line_data:pack2.pr2 rdfs:label "pr2" .
+line_data:pack2 rdfs:label "pack2";
+  line:member line_data:pack2.pr2 .
