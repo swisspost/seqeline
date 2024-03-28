@@ -50,6 +50,7 @@ public class NodeProcessor {
                             .map(param -> binding(identifier(param), BindingType.PARAMETER)
                                     .position(i.getAndIncrement()))
                             .forEach(param -> context().declare(param));
+                    processChildren(node.child("seq_of_declare_specs")).run();
                     processChildren(node.child("body")).run();
                 });
             }

@@ -4,14 +4,14 @@
 line_data:test_pack rdfs:label "test_pack";
   line:member line_data:test_pack.test_proc .
 line_data:test_pack.test_proc rdfs:label "test_proc";
-  line:member line_data::parameter:10 .
-line_data::parameter:10 rdfs:label "test_param";
+  line:member line_data::parameter:3 .
+line_data::parameter:3 rdfs:label "test_param";
   line:position "0";
-  line:output line_data::argument:14 .
-line_data::argument:14 rdfs:label "[0]";
+  line:output line_data::argument:7 .
+line_data::argument:7 rdfs:label "[0]";
   line:position "0";
-  line:output line_data::call:13 .
-line_data::call:13 rdfs:label "test_proc2";
+  line:output line_data::call:6 .
+line_data::call:6 rdfs:label "test_proc2";
   line:reference line_data:test_pack2.test_proc2 .
 line_data:test_pack2.test_proc2 rdfs:label "test_proc2" .
 line_data:test_pack2 rdfs:label "test_pack2";

@@ -180,7 +180,6 @@ public class Parser {
             "package_obj_body",
             "atom",
             "standard_function",
-            "seq_of_declare_specs",
             "declare_spec",
             "select_statement",
 

@@ -75,6 +75,7 @@ public class TreeProcessor {
 
     public Model createModel() {
         Stack stack = new Stack();
+        Binding.resetCounter();
         new NodeProcessor(stack, schema).process(root);
 
         Map<Binding, IRI> createdNodes = new HashMap<>();

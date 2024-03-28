@@ -104,4 +104,8 @@ public class Binding {
         this.position = position;
         return this;
     }
+
+    public static void resetCounter() {
+        sequence.set(0);
+    }
 }
