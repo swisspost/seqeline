@@ -88,18 +88,21 @@ public class NodeProcessor {
             case "return_statement" ->
                 stack.execute(new Wrapper(new Binding("[return]", BindingType.RETURN)), processChildren(node));
 
-            case "CursorUnit" -> {
-                var cursor = new Binding(text(node.child("ID")), BindingType.CURSOR);
+            case "cursor_declaration" -> {
+                var cursor = binding(identifier(node), BindingType.CURSOR);
                 context().declare(cursor);
                 stack.execute(new LexicalScope(cursor), () -> {
-                    process(node.child("FormalParameters"));
-                    stack.execute(new Wrapper(new Binding("[cursor]", BindingType.RETURN)), ()->process(node.child("SelectStatement")));
+                    node.children("parameter_spec").children("parameter_name").each().stream()
+                            .map(param -> binding(identifier(param), BindingType.PARAMETER))
+                            .forEach(param -> context().declare(param));
+                    stack.execute(new Wrapper(new Binding("[cursor]", BindingType.RETURN)), ()->process(node.child("select_only_statement")));
                 });
             }
 
-            case "FetchStatement" -> {
-                var source = resolveExisting(node.child("QualifiedName"));
-                node.children("Expression").find("Column").each().stream()
+            case "fetch_statement" -> {
+                var cursorName = node.child("cursor_name");
+                var source = resolveExisting(cursorName.find("id_expression").first());
+                cursorName.nextAll().find("id_expression").each().stream()
                         .map(this::resolveExisting)
                         .forEach(source::addOutput);
             }
