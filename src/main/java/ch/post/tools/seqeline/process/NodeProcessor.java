@@ -107,7 +107,7 @@ public class NodeProcessor {
                         .forEach(source::addOutput);
             }
 
-            case "Assignment", "OpenStatement" ->
+            case "assignment_statement", "open" ->
                 stack.execute(new Assignment(), processChildren(node));
 
             case "IfStatement", "CaseWhenClause" -> {
