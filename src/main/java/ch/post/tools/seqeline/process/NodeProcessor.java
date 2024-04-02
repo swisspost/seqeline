@@ -107,13 +107,13 @@ public class NodeProcessor {
                         .forEach(source::addOutput);
             }
 
-            case "assignment_statement", "open" ->
+            case "assignment_statement" ->
                 stack.execute(new Assignment(), processChildren(node));
 
-            case "IfStatement", "CaseWhenClause" -> {
+            case "if_statement", "CaseWhenClause" -> {
                 // TODO: consider effects
-                stack.execute(new IgnoreReturn(), () -> process(node.child(0)));
-                processSiblings(node.child(0)).run();
+                stack.execute(new IgnoreReturn(), () -> process(node.child("condition")));
+                processSiblings(node.child("condition")).run();
             }
 
             case "ForStatement", "CursorForLoopStatement" -> stack.execute(new LexicalScope(), () -> {
