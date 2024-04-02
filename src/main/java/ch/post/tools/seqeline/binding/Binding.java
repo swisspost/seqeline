@@ -22,7 +22,7 @@ public class Binding {
     private final String name;
 
     @Getter
-    private final BindingType type;
+    public final BindingType type;
 
     @Setter
     private List<String> additionalTypes;

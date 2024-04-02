@@ -31,7 +31,7 @@ public class Schema {
                     while (parser.nextToken() != JsonToken.END_ARRAY) {
                         String tableName = null;
                         String tableComment = null;
-                        List<Column> columns = new ArrayList<>();
+                        List<Relation.Column> columns = new ArrayList<>();
                         while (parser.nextToken() != JsonToken.END_OBJECT) {
                             if ("columns".equals(parser.getCurrentName())) {
                                 while (parser.nextToken() != JsonToken.END_ARRAY) {
@@ -45,7 +45,7 @@ public class Schema {
                                             comment = parser.nextTextValue().toLowerCase();
                                         }
                                     }
-                                    columns.add(new Column(name, comment));
+                                    columns.add(new Relation.Column(name, comment));
                                 }
                             }
                             if ("name".equals(parser.getCurrentName())) {
@@ -56,12 +56,7 @@ public class Schema {
                             }
                         }
                         Objects.requireNonNull(tableName);
-                        Relation table = Relation.of(tableName, RelationType.TABLE, tableComment);
-                        columns.forEach(column -> {
-                            var binding = new Binding(column.name, BindingType.COLUMN);
-                            binding.setComment(column.comment);
-                            table.getBinding().addChild(binding);
-                        });
+                        Relation table = new Relation(tableName, RelationType.TABLE, tableComment, columns);
                         relations.put(tableName, table);
                     }
                 }
@@ -82,12 +77,10 @@ public class Schema {
     }
 
     public Optional<Binding> resolve(String name) {
-        return Optional.ofNullable(relations.get(name)).map(Relation::getBinding);
+        return Optional.ofNullable(relations.get(name)).map(Relation::getBinding).map(binding->binding);
     }
 
     public Stream<Relation> relations() {
         return relations.values().stream();
     }
-
-    private record Column(String name, String comment){}
 }

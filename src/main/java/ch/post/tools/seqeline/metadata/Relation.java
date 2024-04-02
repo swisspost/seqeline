@@ -4,20 +4,21 @@ import ch.post.tools.seqeline.binding.Binding;
 import ch.post.tools.seqeline.binding.BindingType;
 import lombok.Getter;
 
-@Getter
-public class Relation {
+import java.util.List;
 
-    private Relation() {};
+public record Relation(String name, RelationType type, String comment, List<Column> columns) {
 
-    public static Relation of(String name, RelationType type, String comment) {
-        var result = new Relation();
-        result.binding = new Binding(name, BindingType.RELATION);
-        result.binding.setComment(comment);
-        result.type = type;
-        result.binding.addType(type.toString());
+    public Binding getBinding() {
+        var result = new Binding(name, BindingType.RELATION);
+        result.addType(type.toString());
+        result.setComment(comment);
+        columns.forEach(column -> {
+            var binding = new Binding(column.name, BindingType.COLUMN);
+            binding.setComment(column.comment);
+            result.addChild(binding);
+        });
         return result;
     }
 
-    private Binding binding;
-    private RelationType type;
+    public record Column(String name, String comment){}
 }

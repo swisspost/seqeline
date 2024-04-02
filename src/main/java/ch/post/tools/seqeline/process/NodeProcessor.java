@@ -126,8 +126,8 @@ public class NodeProcessor {
                 process(node.child("seq_of_statements"));
             });
 
-            case "SelectIntoStatement", "SelectStatement", "QueryBlock" -> {
-                if (node.child("IntoClause").isNotEmpty()) {
+            case "query_block" -> {
+                if (node.child("into_clause").isNotEmpty()) {
                     stack.execute(new MultipleAssignment(intoVariables(node)),
                             () -> stack.execute(new SelectStatement(), processChildren(node)));
                 } else {
@@ -142,10 +142,10 @@ public class NodeProcessor {
                     context().declare(name);
                 });
 
-            case "SelectList" ->
+            case "selected_list" ->
                 stack.execute(new SelectStatement.SelectList(), () ->
-                        node.children().each().forEach(child -> {
-                            if (child.is("ColumnAlias")) {
+                        node.child("select_list_elements").children().each().forEach(child -> {
+                            if (child.is("column_alias")) {
                                 Binding alias = binding(child, BindingType.ALIAS);
                                 context().declare(alias);
                                 context().returnBinding(alias);
@@ -170,13 +170,11 @@ public class NodeProcessor {
                         .forEach(entry -> stack.execute(new Assignment(entry.getValue()), () -> process(entry.getKey())));
             }
 
-            case "TableName" -> {
-                var struct = schema.resolve(text(node))
+            case "tableview_name" -> {
+                var struct = schema.resolve(text(identifier(node)))
                         .map(relation -> stack.root().declare(relation))
                         .orElse(resolveNew(node, BindingType.STRUCTURE));
-                if (!node.parent("TableReference").isEmpty()) {
-                    context().returnBinding(struct);
-                }
+                context().returnBinding(struct);
             }
 
             case "PrimaryExpression" ->
@@ -206,7 +204,7 @@ public class NodeProcessor {
     }
 
     private List<Binding> intoVariables(Match node) {
-        var vars = node.child("IntoClause").children("VariableName").each();
+        var vars = node.child("into_clause").find("id_expression").each();
         return vars.stream()
                 .map(this::text)
                 .map(QualifiedName::of)

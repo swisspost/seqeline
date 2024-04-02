@@ -102,6 +102,16 @@ class GenerationTest {
             {
                 "relations": [
                     {
+                        "name": "tab",
+                        "type": "table",
+                        "columns": [
+                            {
+                                "name": "col",
+                                "type": "number"
+                            }
+                        ]
+                    },
+                    {
                         "name": "employee",
                         "type": "table",
                         "comment": "Our workforce",
