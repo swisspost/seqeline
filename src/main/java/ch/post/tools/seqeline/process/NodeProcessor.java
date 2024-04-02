@@ -110,22 +110,20 @@ public class NodeProcessor {
             case "assignment_statement" ->
                 stack.execute(new Assignment(), processChildren(node));
 
-            case "if_statement" -> {
-                // TODO: consider effects
-                stack.execute(new IgnoreReturn(), () -> process(node.child("condition")));
-                processSiblings(node.child("condition")).run();
-            }
-
-            case "simple_case_statement", "simple_case_when_part", "searched_case_when_part" -> {
+            case "if_statement", "simple_case_statement", "simple_case_when_part", "searched_case_when_part" -> {
                 // TODO: consider effects
                 stack.execute(new IgnoreReturn(), () -> process(node.child(0)));
                 processSiblings(node.child(0)).run();
             }
 
-            case "ForStatement", "CursorForLoopStatement" -> stack.execute(new LexicalScope(), () -> {
-                stack.execute(new Assignment(resolveNew(node.child(0), BindingType.STRUCTURE)),
-                        () -> process(node.child(1)));
-                node.child(1).nextAll().each().forEach(this::process);
+            case "loop_statement" -> stack.execute(new LexicalScope(), () -> {
+                // TODO: consider effects
+                var loopParam = node.child("cursor_loop_param");
+                if(loopParam.child("record_name").isNotEmpty()) {
+                    stack.execute(new Assignment(resolveNew(loopParam.child("record_name"), BindingType.STRUCTURE)),
+                            () -> process(loopParam.child("cursor_name")));
+                }
+                process(node.child("seq_of_statements"));
             });
 
             case "SelectIntoStatement", "SelectStatement", "QueryBlock" -> {
