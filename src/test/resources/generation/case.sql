@@ -1,0 +1,7 @@
+CREATE OR REPLACE PACKAGE BODY pkg IS
+    PROCEDURE pr(p NUMBER, q NUMBER, r NUMBER) IS
+        n NUMBER;
+    BEGIN
+        n := CASE p WHEN q THEN r ELSE 0 END;
+    END;
+END;
