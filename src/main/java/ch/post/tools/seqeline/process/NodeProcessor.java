@@ -158,15 +158,23 @@ public class NodeProcessor {
                             }
                         }));
 
-            case "SingleTableInsert" -> {
-                var tableName = text(node.child("InsertIntoClause").find("TableName"));
+            case "single_table_insert" -> {
+                var tableName = text(identifier(node.child("insert_into_clause").find("tableview_name")));
                 var table = stack.root().declare(schema.resolve(tableName).orElse(new Binding(tableName, BindingType.RELATION)));
-                Stream<Binding> targets = node.child("InsertIntoClause").find("Column").each().stream()
-                        .map(column -> binding(column, BindingType.COLUMN))
-                        .map(table::addChild);
-                Stream<Match> sources = node.child("ValuesClause").children().each().stream();
+                List<Binding> targets;
+                var columns = node.child("insert_into_clause").find("column_name");
+                if(columns.isNotEmpty()) {
+                    targets = columns.each().stream()
+                            .map(column -> binding(column, BindingType.COLUMN))
+                            .map(table::addChild)
+                            .toList();
+                } else {
+                    targets = table.children().toList();
+                }
 
-                Streams.zip(sources, targets, Map::entry)
+                Stream<Match> sources = node.child("values_clause").find("id_expression").each().stream();
+
+                Streams.zip(sources, targets.stream(), Map::entry)
                         .forEach(entry -> stack.execute(new Assignment(entry.getValue()), () -> process(entry.getKey())));
             }
 
