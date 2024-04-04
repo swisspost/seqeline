@@ -36,4 +36,11 @@ public class Children extends Frame {
             }
         }
     }
+
+    @Override
+    protected void pop() {
+        if(owner != null && owner.children().findAny().isEmpty()) {
+            parent.returnBinding(owner);
+        }
+    }
 }

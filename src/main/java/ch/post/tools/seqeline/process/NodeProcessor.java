@@ -185,16 +185,8 @@ public class NodeProcessor {
                 context().returnBinding(struct);
             }
 
-            case "PrimaryExpression" ->
+            case "general_element" -> {
                 stack.execute(new Children(true), processChildren(node));
-
-            case "PrimarySuffix" -> {
-                var id = node.child("QualifiedID");
-                if(id.isNotEmpty()) {
-                    context().returnBinding(binding(id, BindingType.FIELD));
-                } else {
-                    processChildren(node).run();
-                }
             }
 
             case "JoinClause", "WhereClause" -> {
