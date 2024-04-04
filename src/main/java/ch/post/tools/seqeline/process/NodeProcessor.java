@@ -189,7 +189,7 @@ public class NodeProcessor {
                 stack.execute(new Children(true), processChildren(node));
             }
 
-            case "JoinClause", "WhereClause" -> {
+            case "join_clause", "where_clause" -> {
                 stack.execute(new SelectStatement.EffectClause(), processChildren(node));
             }
 

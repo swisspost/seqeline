@@ -112,6 +112,20 @@ class GenerationTest {
                         ]
                     },
                     {
+                        "name": "tab2",
+                        "type": "table",
+                        "columns": [
+                            {
+                                "name": "col2",
+                                "type": "number"
+                            },
+                            {
+                                "name": "col3",
+                                "type": "number"
+                            }
+                        ]
+                    },
+                    {
                         "name": "employee",
                         "type": "table",
                         "comment": "Our workforce",
