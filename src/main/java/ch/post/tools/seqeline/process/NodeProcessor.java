@@ -81,7 +81,8 @@ public class NodeProcessor {
                 if(node.next("id_expression").isEmpty()) {
                     var id = resolveNew(node, BindingType.FIELD);
                     context().returnBinding(id);
-                    node.prev("id_expression").each().forEach(relation -> context().resolve(QualifiedName.of(text(relation))).ifPresent(r -> r.addChild(id)));
+                    node.prev("id_expression").each().forEach(structure ->
+                            context().resolve(QualifiedName.of(text(structure))).ifPresent(r -> r.addChild(id)));
                 }
             }
 
@@ -146,7 +147,7 @@ public class NodeProcessor {
 
             case "selected_list" ->
                 stack.execute(new SelectStatement.SelectList(), () ->
-                        node.child("select_list_elements").children().each().forEach(child -> {
+                        node.children("select_list_elements").children().each().forEach(child -> {
                             if (child.is("column_alias")) {
                                 Binding alias = binding(child, BindingType.ALIAS);
                                 context().declare(alias);
