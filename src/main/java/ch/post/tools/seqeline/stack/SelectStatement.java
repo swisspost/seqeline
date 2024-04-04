@@ -7,6 +7,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -17,7 +19,7 @@ public class SelectStatement extends Frame {
 
     private final BindingBag selection = new BindingBag();
 
-    private final BindingBag inputs = new BindingBag();
+    private final List<Binding> inputs = new ArrayList<>();
 
     private final BindingBag outputs = new BindingBag();
 

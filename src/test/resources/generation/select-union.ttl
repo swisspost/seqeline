@@ -16,3 +16,14 @@ line_data::field:2 rdfs:label "c";
 line_data::result:3 rdfs:label "c";
   line:output line_data:n .
 line_data:n rdfs:label "n" .
+line_data:tab2 rdfs:label "tab2";
+  line:member line_data:tab2.col2, line_data:tab2.col3 .
+line_data:tab2.col2 rdfs:label "col2";
+  line:output line_data::field:12 .
+line_data::field:12 rdfs:label "col2";
+  line:output line_data::alias:10 .
+line_data::alias:10 rdfs:label "c";
+  line:output line_data::result:11 .
+line_data::result:11 rdfs:label "c";
+  line:output line_data::field:2 .
+line_data:tab2.col3 rdfs:label "col3" .

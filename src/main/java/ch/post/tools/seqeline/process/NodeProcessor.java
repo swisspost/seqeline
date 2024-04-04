@@ -135,6 +135,8 @@ public class NodeProcessor {
                 }
             }
 
+            case "into_clause" -> skip();
+
             case "WithClause" ->
                 node.children("Name").each().forEach(child -> {
                     var name = binding(child, BindingType.STRUCTURE);
@@ -191,12 +193,6 @@ public class NodeProcessor {
 
             case "join_clause", "where_clause" -> {
                 stack.execute(new SelectStatement.EffectClause(), processChildren(node));
-            }
-
-            case "SubqueryOperation" -> {
-                if(node.parent("SelectStatement").isNotEmpty() && node.prevAll("SubqueryOperation").isEmpty()) {
-                    stack.pop();
-                }
             }
 
             default -> processChildren(node).run();

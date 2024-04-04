@@ -14,10 +14,10 @@ line_data:n rdfs:label "n" .
 line_data:tab2 rdfs:label "tab2";
   line:member line_data:tab2.col2, line_data:tab2.col3 .
 line_data:tab2.col2 rdfs:label "col2";
-  line:output line_data::field:15 .
-line_data::field:15 rdfs:label "col2";
+  line:output line_data::field:14 .
+line_data::field:14 rdfs:label "col2";
   line:effect line_data::result:3 .
 line_data:tab2.col3 rdfs:label "col3";
-  line:output line_data::field:17 .
-line_data::field:17 rdfs:label "col3";
+  line:output line_data::field:16 .
+line_data::field:16 rdfs:label "col3";
   line:effect line_data::result:3 .
