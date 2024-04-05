@@ -32,7 +32,13 @@ public class LexicalScope extends Frame {
         }
         switch(binding.getType()) {
             case CALL -> { /* don't record routine calls */ }
-            case RETURN -> binding.addOutput(owner);
+            case RETURN -> {
+                if(owner != null) {
+                    binding.addOutput(owner);
+                } else {
+                    parent.returnBinding(binding);
+                }
+            }
             default ->  parent.returnBinding(binding);
         }
      }
