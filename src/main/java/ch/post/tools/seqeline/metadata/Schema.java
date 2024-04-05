@@ -29,8 +29,9 @@ public class Schema {
             while (parser.nextToken() != JsonToken.END_OBJECT) {
                 if ("relations".equals(parser.getCurrentName())) {
                     while (parser.nextToken() != JsonToken.END_ARRAY) {
-                        String tableName = null;
-                        String tableComment = null;
+                        String relationName = null;
+                        String relationComment = null;
+                        String relationType= null;
                         List<Relation.Column> columns = new ArrayList<>();
                         while (parser.nextToken() != JsonToken.END_OBJECT) {
                             if ("columns".equals(parser.getCurrentName())) {
@@ -49,15 +50,20 @@ public class Schema {
                                 }
                             }
                             if ("name".equals(parser.getCurrentName())) {
-                                tableName = parser.nextTextValue().toLowerCase();
+                                relationName = parser.nextTextValue().toLowerCase();
+                            }
+                            if ("type".equals(parser.getCurrentName())) {
+                                relationType = parser.nextTextValue().toLowerCase();
                             }
                             if ("comment".equals(parser.getCurrentName())) {
-                                tableComment = parser.nextTextValue().toLowerCase();
+                                relationComment = parser.nextTextValue().toLowerCase();
                             }
                         }
-                        Objects.requireNonNull(tableName);
-                        Relation table = new Relation(tableName, RelationType.TABLE, tableComment, columns);
-                        relations.put(tableName, table);
+                        if("table".equals(relationType) || "view".equals(relationType)) {
+                            Objects.requireNonNull(relationName);
+                            Relation relation = new Relation(relationName, relationType, relationComment, columns);
+                            relations.put(relationName, relation);
+                        }
                     }
                 }
             }

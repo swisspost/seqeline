@@ -218,7 +218,7 @@ public class NodeProcessor {
                 var name = node.find("id_expression").first();
                 var view = schema.resolve(text(name))
                         .map(relation -> stack.root().declare(relation))
-                        .orElse(resolveNew(name, BindingType.RELATION).addType("VIEW"));
+                        .orElse(resolveNew(name, BindingType.RELATION).addType("view"));
                 stack.execute(new Children(view), ()->process(node.child("select_only_statement").first()));
             }
 

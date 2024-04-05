@@ -25,7 +25,7 @@ public class Binding {
     public final BindingType type;
 
     @Setter
-    private List<String> additionalTypes;
+    private Set<String> additionalTypes;
 
     @Getter
     @Setter
@@ -75,7 +75,7 @@ public class Binding {
 
     public Binding addType(String type) {
         if(additionalTypes == null) {
-            additionalTypes = new ArrayList<>();
+            additionalTypes = new HashSet<>();
         }
         additionalTypes.add(type);
         return this;

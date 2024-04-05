@@ -6,11 +6,11 @@ import lombok.Getter;
 
 import java.util.List;
 
-public record Relation(String name, RelationType type, String comment, List<Column> columns) {
+public record Relation(String name, String type, String comment, List<Column> columns) {
 
     public Binding getBinding() {
         var result = new Binding(name, BindingType.RELATION);
-        result.addType(type.toString());
+        result.addType(type);
         result.setComment(comment);
         columns.forEach(column -> {
             var binding = new Binding(column.name, BindingType.COLUMN);
