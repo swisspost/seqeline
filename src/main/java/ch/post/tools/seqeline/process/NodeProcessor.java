@@ -40,8 +40,12 @@ public class NodeProcessor {
                 stack.execute(new Assignment(variable), processSiblings(node.child(0)));
             }
 
-            case "procedure_body", "function_body" -> {
-                var routine = binding(identifier(node), BindingType.ROUTINE);
+            case "procedure_body", "function_body", "create_procedure_body", "create_function_body" -> {
+                var routineName = node.child("procedure_name,function_name");
+                if(routineName.isEmpty()) {
+                    routineName = node;
+                }
+                var routine = binding(identifier(routineName), BindingType.ROUTINE);
                 context().declare(routine);
 
                 stack.execute(new LexicalScope(routine), () -> {
@@ -236,7 +240,7 @@ public class NodeProcessor {
     }
 
     private String text(Match node) {
-        return node.text().trim().toLowerCase();
+        return node.text().trim().toLowerCase().replace("\"", "");
     }
 
     private Match identifier(Match node) {
