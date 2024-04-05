@@ -138,10 +138,14 @@ public class NodeProcessor {
 
             case "into_clause" -> skip();
 
-            case "WithClause" ->
-                node.children("Name").each().forEach(child -> {
+            case "select_only_statement" ->
+                stack.execute(new LexicalScope(), processChildren(node));
+
+
+            case "with_clause" ->
+                node.find("query_name").each().forEach(child -> {
                     var name = binding(child, BindingType.STRUCTURE);
-                    stack.execute(new Children(name), ()->process(child.next()));
+                    stack.execute(new Children(name), ()->process(child.nextAll("subquery").first()));
                     context().declare(name);
                 });
 
