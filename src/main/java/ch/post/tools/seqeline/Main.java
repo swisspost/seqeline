@@ -218,7 +218,7 @@ public class Main implements Callable<Integer> {
     }
 
     private boolean shouldGenerate(File source, File target) {
-        return !target.exists() || source.lastModified() > target.lastModified();
+        return !target.exists() || target.length() == 0 || source.lastModified() > target.lastModified();
     }
 
     public static void main(String... args) throws IOException, SAXException {

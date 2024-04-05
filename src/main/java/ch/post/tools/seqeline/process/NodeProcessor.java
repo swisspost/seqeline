@@ -28,8 +28,14 @@ public class NodeProcessor {
         switch (node.tag()) {
             case "create_package" -> skip();
 
+            case "schema_object_name" -> skip();
+
+            case "create_synonym" -> skip();
+
+            case "grant_statement" -> skip();
+
             case "create_package_body" -> {
-                var pack = binding(identifier(node), BindingType.PACKAGE);
+                var pack = binding(identifier(node.child("package_name")), BindingType.PACKAGE);
                 context().declare(pack);
                 stack.execute(new LexicalScope(pack), processSiblings(node.child("package_name")));
             }
@@ -153,6 +159,8 @@ public class NodeProcessor {
                     context().declare(name);
                 });
 
+            case "group_by_clause" -> skip();
+
             case "selected_list" ->
                 stack.execute(new SelectStatement.SelectList(), () ->
                         node.children("select_list_elements").children().each().forEach(child -> {
@@ -188,6 +196,8 @@ public class NodeProcessor {
                 Streams.zip(sources, targets.stream(), Map::entry)
                         .forEach(entry -> stack.execute(new Assignment(entry.getValue()), () -> process(entry.getKey())));
             }
+
+            case "update_statement", "delete_statement" -> skip(); //TODO
 
             case "tableview_name" -> {
                 var struct = schema.resolve(text(identifier(node)))
