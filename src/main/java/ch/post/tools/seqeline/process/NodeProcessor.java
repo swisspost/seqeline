@@ -200,6 +200,15 @@ public class NodeProcessor {
                 stack.execute(new SelectStatement.EffectClause(), processChildren(node));
             }
 
+            case "create_view" -> {
+                var name = node.find("id_expression").first();
+                var view = schema.resolve(text(name))
+                        .map(relation -> stack.root().declare(relation))
+                        .orElse(resolveNew(name, BindingType.RELATION).addType("VIEW"));
+                stack.execute(new Children(view), ()->process(node.child("select_only_statement").first()));
+            }
+
+
             default -> processChildren(node).run();
         }
     }

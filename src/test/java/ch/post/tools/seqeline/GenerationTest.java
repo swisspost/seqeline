@@ -64,30 +64,35 @@ class GenerationTest {
         if(interactiveDev()) {
             root.write(tree);
         }
-        var treeProcessor = new TreeProcessor("", "", "", root, schema);
-        var model = treeProcessor.createModel();
-        var out = new ByteArrayOutputStream();
-        RDFWriter writer = Rio.createWriter(RDFFormat.TURTLE, out);
-        writer.startRDF();
-        model.getNamespaces().stream()
-                .filter(ns -> !ns.getPrefix().equals("rdf"))
-                .forEach(ns -> writer.handleNamespace(ns.getPrefix(), ns.getName()));
-        for (var statement : model) {
-            if(!statement.getPredicate().equals(RDF.TYPE)) {
-                writer.handleStatement(statement);
+        var rdfText="<error>";
+        try {
+            var treeProcessor = new TreeProcessor("", "", "", root, schema);
+            var model = treeProcessor.createModel();
+            var out = new ByteArrayOutputStream();
+            RDFWriter writer = Rio.createWriter(RDFFormat.TURTLE, out);
+            writer.startRDF();
+            model.getNamespaces().stream()
+                    .filter(ns -> !ns.getPrefix().equals("rdf"))
+                    .forEach(ns -> writer.handleNamespace(ns.getPrefix(), ns.getName()));
+            for (var statement : model) {
+                if (!statement.getPredicate().equals(RDF.TYPE)) {
+                    writer.handleStatement(statement);
+                }
             }
-        }
-        writer.endRDF();
 
-        var rdfText = new String(out.toByteArray())
-                .replaceAll("\\^\\^.*>", "")
-                .replaceAll("(?m)^[ \t]*\r?\n", "");
-        if(interactiveDev()) {
-            System.out.println("https://www.ldf.fi/service/rdf-grapher?rdf=" + URLEncoder.encode(rdfText, StandardCharsets.UTF_8.toString()));
-            System.out.println();
-            System.out.println(tree);
-            System.out.println();
-            System.out.println(rdfText);
+            writer.endRDF();
+
+            rdfText = new String(out.toByteArray())
+                    .replaceAll("\\^\\^.*>", "")
+                    .replaceAll("(?m)^[ \t]*\r?\n", "");
+        } finally {
+            if (interactiveDev()) {
+                System.out.println("https://www.ldf.fi/service/rdf-grapher?rdf=" + URLEncoder.encode(rdfText, StandardCharsets.UTF_8.toString()));
+                System.out.println();
+                System.out.println(tree);
+                System.out.println();
+                System.out.println(rdfText);
+            }
         }
         return rdfText;
     }

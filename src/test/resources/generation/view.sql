@@ -1,0 +1,2 @@
+CREATE VIEW v AS
+    SELECT CONCAT(col2, col3) c FROM tab2;

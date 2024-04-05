@@ -73,11 +73,12 @@ public class Binding {
         references.add(binding);
     }
 
-    public void addType(String type) {
+    public Binding addType(String type) {
         if(additionalTypes == null) {
             additionalTypes = new ArrayList<>();
         }
         additionalTypes.add(type);
+        return this;
     }
 
     public Stream<Binding> children() {
