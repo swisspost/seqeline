@@ -74,17 +74,8 @@ public class NodeProcessor {
                 } else {
                     qualifiedName.name(text(names.first()));
                 }
-                context().returnBinding(context().resolve(qualifiedName.build()).orElseThrow());
-
-                // Arguments
-                AtomicInteger position = new AtomicInteger(0);
-                node.children("argument").each().forEach(argument -> {
-                    if(argument.child("identifier").isEmpty()) {
-                        stack.execute(new Wrapper(new Binding("["+position+"]", BindingType.ARGUMENT).position(position.getAndIncrement())), processChildren(argument));
-                    } else {
-                        stack.execute(new Wrapper(binding(identifier(argument), BindingType.ARGUMENT)), processChildren(argument));
-                    }
-                });
+                var calledName = qualifiedName.build();
+                handleCall(calledName, node.children("argument"));
             });
 
             case "id_expression" -> {
@@ -103,8 +94,9 @@ public class NodeProcessor {
                 var cursor = binding(identifier(node), BindingType.CURSOR);
                 context().declare(cursor);
                 stack.execute(new LexicalScope(cursor), () -> {
+                    var i = new AtomicInteger(0);
                     node.children("parameter_spec").children("parameter_name").each().stream()
-                            .map(param -> binding(identifier(param), BindingType.PARAMETER))
+                            .map(param -> binding(identifier(param), BindingType.PARAMETER).position(i.getAndIncrement()))
                             .forEach(param -> context().declare(param));
                     stack.execute(new Wrapper(new Binding("[cursor]", BindingType.RETURN)), ()->process(node.child("select_only_statement")));
                 });
@@ -134,7 +126,7 @@ public class NodeProcessor {
                     stack.execute(new Assignment(resolveNew(loopParam.child("record_name"), BindingType.STRUCTURE)),
                             () -> process(loopParam.child("cursor_name")));
                 }
-                process(node.child("seq_of_statements"));
+                process(node.children("seq_of_statements"));
             });
 
             case "query_block" -> {
@@ -210,11 +202,25 @@ public class NodeProcessor {
                 stack.execute(new Children(true), processChildren(node));
             }
 
+            case "general_element_part" -> {
+                var arguments = node.children("argument");
+                var name = text(node.child("id_expression"));
+                if(arguments.isNotEmpty() && !isBuiltin(name)) {
+                    stack.execute(new RoutineCall(), () -> {
+                        var calledName = QualifiedName.builder().type(BindingType.CURSOR).name(name).build();
+                        handleCall(calledName, node.children("argument"));
+                    });
+                } else {
+                    processChildren(node).run();
+                }
+            }
+
             case "join_clause", "where_clause" -> {
                 stack.execute(new SelectStatement.EffectClause(), processChildren(node));
             }
 
             case "create_view" -> {
+                // TODO: correct handling of output column mapping
                 var name = node.find("id_expression").first();
                 var view = schema.resolve(text(name))
                         .map(relation -> stack.root().declare(relation))
@@ -225,6 +231,20 @@ public class NodeProcessor {
 
             default -> processChildren(node).run();
         }
+    }
+
+    private void handleCall(QualifiedName calledName, Match arguments) {
+        context().returnBinding(context().resolve(calledName).orElseThrow());
+
+        // Arguments
+        AtomicInteger position = new AtomicInteger(0);
+        arguments.each().forEach(argument -> {
+            if(argument.child("identifier").isEmpty()) {
+                stack.execute(new Wrapper(new Binding("["+position+"]", BindingType.ARGUMENT).position(position.getAndIncrement())), processChildren(argument));
+            } else {
+                stack.execute(new Wrapper(binding(identifier(argument), BindingType.ARGUMENT)), processChildren(argument));
+            }
+        });
     }
 
     private List<Binding> intoVariables(Match node) {
@@ -271,5 +291,9 @@ public class NodeProcessor {
 
     private Frame context() {
         return stack.top();
+    }
+
+    private boolean isBuiltin(String name) {
+        return name.toLowerCase().equals("concat"); // TODO: use parser keywords
     }
 }

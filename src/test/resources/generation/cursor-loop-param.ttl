@@ -1,0 +1,28 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix line: <https://schema/lineage/> .
+@prefix line_data: <https://data/lineage/> .
+line_data:pkg rdfs:label "pkg";
+  line:member line_data:pkg.pr .
+line_data:pkg.pr rdfs:label "pr";
+  line:member line_data::variable:4, line_data::variable:5, line_data::cursor:6, line_data::parameter:3 .
+line_data::variable:4 rdfs:label "r";
+  line:output line_data::variable:5 .
+line_data::variable:5 rdfs:label "s" .
+line_data::cursor:6 rdfs:label "c";
+  line:member line_data::parameter:7 .
+line_data::parameter:7 rdfs:label "m";
+  line:position "0";
+  line:effect line_data::result:10 .
+line_data::result:10 rdfs:label "a";
+  line:output line_data::return:8 .
+line_data::return:8 rdfs:label "[cursor]";
+  line:output line_data::cursor:6 .
+line_data::parameter:3 rdfs:label "n";
+  line:position "0";
+  line:output line_data::argument:14 .
+line_data::argument:14 rdfs:label "[0]";
+  line:position "0";
+  line:output line_data::call:13 .
+line_data::call:13 rdfs:label "c";
+  line:output line_data::variable:4;
+  line:reference line_data::cursor:6 .
