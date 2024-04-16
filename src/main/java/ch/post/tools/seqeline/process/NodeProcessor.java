@@ -78,15 +78,6 @@ public class NodeProcessor {
                 handleCall(calledName, node.children("argument"));
             });
 
-            case "id_expression" -> {
-                if(node.next("id_expression").isEmpty()) {
-                    var id = resolveNew(node, BindingType.FIELD);
-                    context().returnBinding(id);
-                    node.prev("id_expression").each().forEach(structure ->
-                            context().resolve(QualifiedName.of(text(structure))).ifPresent(r -> r.addChild(id)));
-                }
-            }
-
             case "return_statement" ->
                 stack.execute(new Wrapper(new Binding("[return]", BindingType.RETURN)), processChildren(node));
 
@@ -207,11 +198,20 @@ public class NodeProcessor {
                 var name = text(node.child("id_expression"));
                 if(arguments.isNotEmpty() && !isBuiltin(name)) {
                     stack.execute(new RoutineCall(), () -> {
-                        var calledName = QualifiedName.builder().type(BindingType.CURSOR).name(name).build();
+                        var calledName = QualifiedName.builder().type(BindingType.ROUTINE).name(name).build();
                         handleCall(calledName, node.children("argument"));
                     });
                 } else {
                     processChildren(node).run();
+                }
+            }
+
+            case "id_expression" -> {
+                if(node.next("id_expression").isEmpty()) {
+                    var id = resolveNew(node, BindingType.FIELD);
+                    context().returnBinding(id);
+                    node.prev("id_expression").each().forEach(structure ->
+                            context().resolve(QualifiedName.of(text(structure))).ifPresent(r -> r.addChild(id)));
                 }
             }
 

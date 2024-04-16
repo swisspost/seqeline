@@ -21,7 +21,13 @@ public class LexicalScope extends Frame {
 
     @Override
     protected Optional<Binding> resolveLocal(QualifiedName qualifiedName) {
-        return declarations.lookup(qualifiedName);
+        var localBinding = declarations.lookup(qualifiedName);;
+        if(qualifiedName.getType() == BindingType.RELATION || qualifiedName.getType() == BindingType.PACKAGE) {
+            localBinding.ifPresent(declarations::remove);
+            return Optional.empty();
+        } else {
+            return localBinding;
+        }
     }
 
     @Override
