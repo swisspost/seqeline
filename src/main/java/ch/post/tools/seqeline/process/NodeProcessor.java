@@ -174,7 +174,7 @@ public class NodeProcessor {
                     targets = table.children().toList();
                 }
 
-                Stream<Match> sources = node.child("values_clause").find("id_expression").each().stream();
+                Stream<Match> sources = node.child("values_clause").child("expressions").children().each().stream();
 
                 Streams.zip(sources, targets.stream(), Map::entry)
                         .forEach(entry -> stack.execute(new Assignment(entry.getValue()), () -> process(entry.getKey())));

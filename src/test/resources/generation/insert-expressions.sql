@@ -1,0 +1,6 @@
+CREATE OR REPLACE PACKAGE BODY pkg IS
+    PROCEDURE pr(p t%ROWTYPE) IS
+    BEGIN
+        INSERT INTO t(a, b) VALUES (p.x, p.y);
+    END;
+END;
