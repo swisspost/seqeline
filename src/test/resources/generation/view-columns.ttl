@@ -1,0 +1,21 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix line: <https://schema/lineage/> .
+@prefix line_data: <https://data/lineage/> .
+line_data:v rdfs:label "v";
+  line:member line_data:v.a, line_data:v.b .
+line_data:v.a rdfs:label "a" .
+line_data:v.b rdfs:label "b" .
+line_data:tab2 rdfs:label "tab2";
+  line:member line_data:tab2.col2, line_data:tab2.col3 .
+line_data:tab2.col2 rdfs:label "col2";
+  line:output line_data::field:4 .
+line_data::field:4 rdfs:label "col2";
+  line:output line_data::result:5 .
+line_data::result:5 rdfs:label "col2";
+  line:output line_data:v.a .
+line_data:tab2.col3 rdfs:label "col3";
+  line:output line_data::field:6 .
+line_data::field:6 rdfs:label "col3";
+  line:output line_data::result:7 .
+line_data::result:7 rdfs:label "col3";
+  line:output line_data:v.b .

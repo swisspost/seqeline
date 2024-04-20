@@ -225,7 +225,15 @@ public class NodeProcessor {
                 var view = schema.resolve(text(name))
                         .map(relation -> stack.root().declare(relation))
                         .orElse(resolveNew(name, BindingType.RELATION).addType("view"));
-                stack.execute(new Children(view), ()->process(node.child("select_only_statement").first()));
+                var select = node.child("select_only_statement").first();
+                var columns = node.child("view_options").find("table_alias");
+                if(columns.isNotEmpty()) {
+                    var targets = columns.each().stream().map(column -> binding(identifier(column), BindingType.COLUMN)).toList();
+                    targets.forEach(view::addChild);
+                    stack.execute(new MultipleAssignment(targets), () -> process(select));
+                } else {
+                    stack.execute(new Children(view), () -> process(select));
+                }
             }
 
 
