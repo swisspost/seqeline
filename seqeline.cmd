@@ -1,0 +1,1 @@
+mvn -q exec:java -f %~dp0pom.xml -Dexec.mainClass=ch.post.tools.seqeline.Main -Dexec.args="%*"

@@ -39,3 +39,5 @@ build/
 deps/
 data/
 .idea/
+
+gen/

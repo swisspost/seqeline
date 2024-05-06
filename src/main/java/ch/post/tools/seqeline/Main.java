@@ -28,7 +28,7 @@ import java.util.stream.Stream;
 import static org.joox.JOOX.$;
 
 
-@Command(name = "sequeline", description = "Generate RDF data lineage graph from PL/SQL code.")
+@Command(name = "seqeline", description = "Generate RDF data lineage graph from PL/SQL code.")
 @Slf4j
 public class Main implements Callable<Integer> {
 
@@ -71,7 +71,7 @@ public class Main implements Callable<Integer> {
     @Option(names = {"-g", "--force-graph"}, description = "Ignore cached files and force graph generation")
     private boolean forceGraph;
 
-    @Option(names = {"--publish"}, description = "Publish graphs to Graph DB")
+    @Option(names = {"--publish"}, description = "Publish graphs to GraphDB")
     private boolean publish;
 
     @Option(names = {"--graphdb-url"}, description = "GraphDB repository to publish to.", defaultValue =
